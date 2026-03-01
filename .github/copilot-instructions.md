@@ -30,3 +30,17 @@
 ## Security
 - Do not commit secrets, private keys, or `.env` files containing credentials.
 - Prefer environment variables for runtime secrets and keep sample values in docs only.
+
+## Requirement and Decision Process
+- Use spec ledger files under `spec/`.
+- Keep one requirement file per ID with fixed frontmatter in `spec/requirements/*.md`.
+- Treat `spec/requirements/index.md` as generated output and read-only in PRs.
+- All agent changes must reference a Requirement ID.
+- Add append-only trace event files for requirement-related changes in `spec/trace/events/`.
+- Add append-only claim lifecycle files (`claim`/`heartbeat`/`release`/`override`) in `spec/trace/claims/` for requirement ownership.
+- Update `spec/TRACE.md` for requirement-to-implementation mapping.
+- Create or update ADRs under `spec/DECISIONS/` for significant design and architecture decisions.
+- Keep `spec/ARCHITECTURE/current-infrastructure.md` current for agent onboarding.
+- Never mark requirements `Done` without verification evidence.
+- Do not change externally visible behavior without corresponding REQ/TRACE/ADR updates.
+- Keep worktrees fresh against `main`; stale worktrees must rebase before merge.

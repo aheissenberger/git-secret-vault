@@ -11,5 +11,17 @@
     }
   },
   "postCreateCommand": "rustup update stable && rustup default stable && rustup component add rustfmt clippy",
-  "remoteUser": "vscode"
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/copilot-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "25",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": true,
+      "pnpmVersion": "latest",
+      "nvmVersion": "latest"
+    }
+  }
 }
