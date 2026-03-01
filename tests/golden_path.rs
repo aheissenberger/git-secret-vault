@@ -164,7 +164,36 @@ fn lock_is_deterministic() {
     assert_eq!(hash_a, hash_b, "content hashes must be identical");
 }
 
-// ── test 8: verify reports ok on intact vault ─────────────────────────────────
+// ── test 8: init creates expected directory structure ─────────────────────────
+
+#[test]
+fn vault_init_creates_expected_structure() {
+    let dir = tempdir().unwrap();
+    Vault::init(dir.path(), PASSWORD).unwrap();
+    assert!(dir.path().join("vault.meta.json").exists(), "vault.meta.json must exist");
+    assert!(dir.path().join("blobs").is_dir(), "blobs/ directory must exist");
+    assert!(dir.path().join("index").is_dir(), "index/ directory must exist");
+}
+
+// ── test 9: locking same label twice updates, not duplicates ──────────────────
+
+#[test]
+fn lock_updates_existing_entry() {
+    let dir = tempdir().unwrap();
+    let vault = Vault::init(dir.path(), PASSWORD).unwrap();
+    let key = vault.derive_key(PASSWORD).unwrap();
+
+    vault.lock(&key, "update-me.env", b"first-value").unwrap();
+    vault.lock(&key, "update-me.env", b"second-value").unwrap();
+
+    let snap = vault.snapshot().unwrap();
+    assert_eq!(snap.entries.len(), 1, "duplicate label must be an update, not a new entry");
+
+    let recovered = vault.unlock(&key, "update-me.env").unwrap();
+    assert_eq!(recovered, b"second-value", "unlock must return the latest value");
+}
+
+// ── test 10: verify reports ok on intact vault ────────────────────────────────
 
 #[test]
 fn verify_reports_ok_on_intact_vault() {
