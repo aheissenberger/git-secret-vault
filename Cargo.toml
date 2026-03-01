@@ -26,6 +26,9 @@ zip = { version = "2", features = ["aes-crypto"] }
 keyring = "3"
 zeroize = { version = "1", features = ["derive"] }
 glob = "0.3"
+rmcp = { version = "0.17.0", features = ["server", "transport-io"] }
+tokio = { version = "1", features = ["full"] }
+schemars = "1"
 
 # The profile that 'dist' will build with
 [profile.dist]

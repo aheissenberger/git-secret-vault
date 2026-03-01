@@ -11,7 +11,26 @@ use cli::{Cli, Commands};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let result = match &cli.command {
+
+    if cli.mcp {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(git_secret_vault::mcp::run_mcp_server(
+                &cli.vault, &cli.index,
+            ))
+            .unwrap_or_else(|e| {
+                eprintln!("MCP server error: {e}");
+                std::process::exit(1);
+            });
+        return Ok(());
+    }
+
+    let Some(command) = &cli.command else {
+        eprintln!("error: a subcommand is required (or use --mcp to start the MCP server)");
+        std::process::exit(2);
+    };
+
+    let result = match command {
         Commands::Init(args) => cli::init::run(args, cli.quiet, cli.verbose),
         Commands::Lock(args) => cli::lock::run(args, cli.quiet, cli.verbose),
         Commands::Unlock(args) => cli::unlock::run(args, cli.quiet, cli.verbose),
