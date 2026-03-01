@@ -1,8 +1,10 @@
 # ADR-0002 GitSecretVault Safety and Compatibility Constraints
 
+> **Superseded by ADR-0003** (Dual-Profile Vault Architecture)
+
 ## Status
 
-Proposed
+Superseded
 
 ## Context
 

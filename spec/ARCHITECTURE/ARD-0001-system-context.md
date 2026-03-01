@@ -23,6 +23,59 @@ Provide a stable architecture baseline so agents can reason about GitSecretVault
 - Architecture references under `spec/ARCHITECTURE/`
 - Decision records under `spec/DECISIONS/`
 
+## Storage Architecture (Dual-Profile)
+
+The vault uses two storage profiles with distinct roles:
+
+**Authoritative profile** — the primary on-disk representation, optimised for Git diff-friendliness and conflict minimisation:
+
+```
+blobs/<sha256-of-plaintext>.enc   — XChaCha20-Poly1305 AEAD ciphertext (24-byte nonce prepended)
+index/events.jsonl                — append-only event log (one JSON object per line)
+index/snapshot.json               — canonical sorted state snapshot
+vault.meta.json                   — vault-level metadata (crypto suite, KDF params, key IDs)
+```
+
+**Interchange profile** — used exclusively for export/import, never authoritative:
+
+```
+vault.zip                         — AES-256 AE-2 encrypted ZIP for cross-tool sharing
+```
+
+## Core Components
+
+| Component        | Role                                                                 |
+|------------------|----------------------------------------------------------------------|
+| BlobStore        | Stores and retrieves content-addressed encrypted blobs under `blobs/` |
+| EventLog         | Appends and reads `index/events.jsonl` (add/update/remove/rotate ops) |
+| SnapshotManager  | Regenerates `index/snapshot.json` from the event log on demand       |
+| VaultMeta        | Reads and writes `vault.meta.json`; enforces no-paths guarantee      |
+| ZipExporter      | Produces `vault.zip` interchange packages from authoritative state   |
+| ZipImporter      | Ingests `vault.zip` packages and writes into authoritative profile   |
+
+## Data Flows
+
+### Lock (plaintext → vault)
+
+1. Plaintext bytes hashed (SHA-256) → content address.
+2. BlobStore encrypts with XChaCha20-Poly1305; random 24-byte nonce prepended; written to `blobs/<hash>.enc`.
+3. EventLog appends `{"op":"add|update","entry_id":"<uuid>","content_hash":"<sha256>","key_id":"<uuid>","timestamp":"..."}`.
+4. SnapshotManager regenerates `index/snapshot.json`.
+
+### Unlock (vault → plaintext)
+
+1. SnapshotManager reads `index/snapshot.json` to resolve current `content_hash` for the requested entry.
+2. BlobStore reads `blobs/<content_hash>.enc`; strips 24-byte nonce; decrypts with XChaCha20-Poly1305.
+3. Plaintext bytes written to destination path.
+
+### Export (vault → ZIP)
+
+1. ZipExporter reads snapshot + blobs; re-encrypts each blob under AES-256 AE-2; writes `vault.zip`.
+
+### Import (ZIP → vault)
+
+1. ZipImporter decrypts `vault.zip`; converts each entry to a blob; appends events; regenerates snapshot.
+
 ## Interface Boundaries
 
 - Requirement records define expected behavior and acceptance criteria
