@@ -10,7 +10,7 @@
 | FR-005 | src/crypto/mod.rs |  |  | Password policy and input handling |
 | FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — In Progress |
 | FR-007 |  |  |  | Git hardening and drift controls |
-| FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status}.rs |  |  | Required CLI command set |
+| FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status,diff,rm,passwd,keyring,verify,clean,doctor,compat,harden,completions,policy,config_cmd}.rs | All commands present and `ls` alias wired | 2026-03-01 | Required CLI command set — **Done** |
 | FR-009 | src/cli/init.rs | scripts/manual-test-sandbox.sh |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — In Progress |
 | FR-010 | src/cli/lock.rs, src/vault/format.rs | cargo test (47 tests pass) |  | Lock workflow: no-arg lock of all tracked entries, `--remove` plaintext cleanup, `--check` drift — **Done** |
 | FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
