@@ -3,11 +3,11 @@
 Generated file. Do not edit manually.
 Source of truth: `spec/requirements/*.md`
 
-- FR-001 | Proposed | Migrate legacy requirements into merge-resistant spec-ledger records.
-- FR-002 | Proposed | Use a standards-compatible encrypted ZIP vault with built-in CLI crypto operations and explicit compatibility checks.
+- FR-001 | Done | Migrate legacy requirements into merge-resistant spec-ledger records.
+- FR-002 | Done | Use a standards-compatible encrypted ZIP vault with built-in CLI crypto operations and explicit compatibility checks.
 - FR-003 | Done | Minimize metadata leakage by default and expose only a minimal non-secret outer index.
 - FR-004 | Done | Store an encrypted manifest in-vault and enforce deterministic, atomic vault update behavior.
-- FR-005 | Proposed | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
+- FR-005 | In Progress | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
 - FR-006 | Done | Enforce safe filesystem handling for extraction, symlink policy, permissions restoration, and plaintext cleanup operations.
 - FR-007 | Done | Provide repository hardening and drift controls to prevent accidental plaintext commits and CI drift regressions.
 - FR-008 | In Progress | Implement the required GitSecretVault CLI command surface and aliases.
@@ -15,21 +15,21 @@ Source of truth: `spec/requirements/*.md`
 - FR-010 | Done | `lock` encrypts tracked content into the vault with deterministic/atomic behavior and optional plaintext cleanup.
 - FR-011 | Done | `unlock` safely restores selected secrets with explicit conflict policies and atomic per-file writes.
 - FR-012 | In Progress | `status` and `diff` provide safe introspection in passwordless and authenticated modes, with machine-readable output.
-- FR-013 | Proposed | Support secure lifecycle operations for entry removal, password rotation, and cross-platform keyring management.
-- FR-014 | Proposed | Deliver maintenance and diagnostics commands for integrity checks, cleanup safety, environment diagnostics, and hardening/compatibility flows.
+- FR-013 | In Progress | Support secure lifecycle operations for entry removal, password rotation, and cross-platform keyring management.
+- FR-014 | Done | Deliver maintenance and diagnostics commands for integrity checks, cleanup safety, environment diagnostics, and hardening/compatibility flows.
 - FR-015 | Done | Provide repository configuration and local state persistence that support safe automation and privacy-preserving status behavior.
-- FR-016 | Proposed | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
-- FR-017 | Proposed | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
-- FR-018 | Proposed | Document operator guidance and preserve locked design decisions as immutable product-level constraints.
+- FR-016 | In Progress | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
+- FR-017 | In Progress | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
+- FR-018 | Done | Document operator guidance and preserve locked design decisions as immutable product-level constraints.
 - FR-019 | Done | `status` must provide privacy-preserving state checks without password and enhanced verification with password.
-- FR-020 | Proposed | `diff` must be password-gated and provide text/binary diff behavior with tool integration and JSON summary.
+- FR-020 | Done | `diff` must be password-gated and provide text/binary diff behavior with tool integration and JSON summary.
 - FR-021 | Done | `rm` must remove vault entries safely with pattern support and atomic updates.
 - FR-022 | Done | `passwd` must support safe re-encryption, stale credential handling, and team rotation workflows.
 - FR-023 | Proposed | `keyring` subcommands must provide cross-platform credential lifecycle management with safe scoping options.
 - FR-024 | Done | `verify` must validate manifest decryption, entry hashes, and corruption scenarios with JSON output support.
 - FR-025 | Done | `clean` must remove unlocked tracked plaintext safely and avoid untracked-file deletion.
 - FR-026 | Done | `doctor` must diagnose environment readiness and provide remediation guidance.
-- FR-027 | Proposed | `compat check` must make compatibility risk visible before decryption workflows fail in user environments.
+- FR-027 | Done | `compat check` must make compatibility risk visible before decryption workflows fail in user environments.
 - FR-028 | Done | `harden` must automate repository safety defaults and hook-based guardrails.
 - NFR-001 | Done | Vault update process should be deterministic in ordering, timestamp policy, and compression settings.
 - NFR-002 | Done | Determinism mechanisms must not weaken cryptographic safety.
@@ -37,7 +37,7 @@ Source of truth: `spec/requirements/*.md`
 - NFR-004 | Done | CLI should provide shell completions for major shells.
 - NFR-005 | Proposed | CLI should respect standard shell editing and paging environment variables.
 - NFR-006 | Done | Release process should provide signed artifacts and checksums.
-- NFR-007 | Proposed | Release process should provide a software bill of materials.
+- NFR-007 | Done | Release process should provide a software bill of materials.
 - NFR-008 | Done | Reproducible build steps should be documented where feasible.
 - NFR-009 | Done | Quality pipeline must include cross-platform CI matrix coverage.
 - NFR-010 | Done | Golden-path command integration tests must cover init/lock/unlock/rm/passwd.

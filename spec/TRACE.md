@@ -3,8 +3,8 @@
 | Requirement | Implementation | Verification | Decisions | Notes |
 |------------|---------------|-------------|-----------|------|
 
-| FR-001 |  |  |  | Legacy migration scaffold |
-| FR-002 | src/vault/format.rs |  | ADR-0002 | Vault format and compatibility |
+| FR-001 | spec/requirements/, spec/requirements/index.md |  |  | Legacy migration scaffold — **Done** |
+| FR-002 | src/vault/format.rs |  | ADR-0002 | Vault format and compatibility — **Done** |
 | FR-003 | src/vault/index.rs, src/cli/{init,lock,status}.rs | cargo test (36 unit tests pass) |  | Metadata minimization and index (`.git-secret-vault.index.json`) — **Done** |
 | FR-004 | src/vault/manifest.rs, src/vault/format.rs, src/fs/mod.rs | cargo test |  | Encrypted manifest, determinism, atomicity — In Progress |
 | FR-005 | src/crypto/mod.rs |  |  | Password policy and input handling |
@@ -49,7 +49,7 @@
 | NFR-004 | src/cli/completions.rs |  |  | Shell completion UX — **Done** |
 | NFR-005 |  |  |  | Editor/pager UX integration |
 | NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts |
-| NFR-007 |  |  |  | SBOM release artifact |
+| NFR-007 | .github/workflows/release.yml |  |  | SBOM release artifact — **Done** |
 | NFR-008 | docs/reproducible-build.md |  |  | Reproducible build documentation |
 | NFR-009 | .github/workflows/ci.yml |  |  | Cross-platform CI matrix |
 | NFR-010 | tests/golden_path.rs | cargo test --test golden_path |  | Golden path integration tests |
