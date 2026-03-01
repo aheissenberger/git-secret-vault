@@ -211,14 +211,49 @@ jobs:
           path: |
             ${{ steps.cargo-dist.outputs.paths }}
             ${{ env.BUILD_MANIFEST_NAME }}
+  # Sign all binary artifacts with cosign keyless signing (GitHub OIDC)
+  sign-artifacts:
+    needs:
+      - plan
+      - build-local-artifacts
+      - build-global-artifacts
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write   # required for OIDC keyless signing
+      contents: read
+    steps:
+      - name: Fetch all build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: artifacts-*
+          path: target/distrib/
+          merge-multiple: true
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+      - name: Sign binaries with cosign (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          find target/distrib/ -type f \( -name "git-secret-vault" -o -name "git-secret-vault.exe" \) | while read bin; do
+            echo "Signing: $bin"
+            cosign sign-blob --yes --bundle "${bin}.sigstore.json" "$bin"
+          done
+      - name: Upload signatures
+        uses: actions/upload-artifact@v6
+        with:
+          name: artifacts-signatures
+          path: target/distrib/**/*.sigstore.json
+
   # Determines if we should publish/announce
   host:
     needs:
       - plan
       - build-local-artifacts
       - build-global-artifacts
-    # Only run if we're "publishing", and only if plan, local and global didn't fail (skipped is fine)
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+      - sign-artifacts
+    # Only run if we're "publishing", and only if plan, local, global, and signing didn't fail (skipped is fine)
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') && (needs.sign-artifacts.result == 'skipped' || needs.sign-artifacts.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-22.04"

@@ -107,3 +107,19 @@ If signing fails, check identity string exactness and ensure the exported `.p12`
 - **Malformed base64 secret / decode failure**
 	- Regenerate `developer-id-signing.p12.b64` and ensure it is a single line.
 	- Confirm `MACOS_CERTIFICATE_P12_BASE64` contains the full value without truncation.
+
+## Artifact verification with cosign
+
+All release binaries are signed with cosign keyless signing via GitHub OIDC. No private key is stored — signatures are anchored to the GitHub Actions OIDC token and recorded in Sigstore's transparency log (Rekor).
+
+To verify a downloaded binary:
+
+```bash
+cosign verify-blob \
+  --bundle git-secret-vault.sigstore.json \
+  --certificate-identity-regexp "https://github.com/OWNER/git-secret-vault/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  git-secret-vault
+```
+
+Replace `OWNER` with the GitHub organisation or user that owns the repository. The `.sigstore.json` bundle is published alongside each release binary.

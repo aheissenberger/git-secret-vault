@@ -49,7 +49,7 @@
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 | src/cli/completions.rs |  |  | Shell completion UX — **Done** |
 | NFR-005 | src/cli/status.rs, src/cli/diff.rs | cargo test (pager tests pass) |  | $PAGER respected in status and diff human-readable output — **Done** |
-| NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts (macOS binaries are Developer ID signed via imported certificate secrets in CI) — **Done** |
+| NFR-006 | .github/workflows/release.yml, docs/reproducible-build.md |  |  | Signed release artifacts — macOS binaries signed with Developer ID; all binaries signed with cosign keyless (GitHub OIDC/Sigstore) via `sign-artifacts` job — **Done** |
 | NFR-007 | .github/workflows/release.yml |  |  | SBOM release artifact — **Done** |
 | NFR-008 | docs/reproducible-build.md |  |  | Reproducible build documentation |
 | NFR-009 | .github/workflows/ci.yml |  |  | Cross-platform CI matrix |
