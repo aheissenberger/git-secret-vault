@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::index::OuterIndex;
+use crate::vault::Vault;
 
 // ── CLI structs ──────────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ pub enum KeyringAction {
     Save {
         #[arg(long, default_value = "git-secret-vault.zip")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
+        #[arg(long, default_value = ".git-secret-vault")]
         index: String,
         /// Read password from stdin instead of prompting
         #[arg(long)]
@@ -39,14 +39,14 @@ pub enum KeyringAction {
     Status {
         #[arg(long, default_value = "git-secret-vault.zip")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
+        #[arg(long, default_value = ".git-secret-vault")]
         index: String,
     },
     /// Remove the stored credential for this vault
     Delete {
         #[arg(long, default_value = "git-secret-vault.zip")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
+        #[arg(long, default_value = ".git-secret-vault")]
         index: String,
     },
     /// List all registered vault credentials
@@ -115,10 +115,15 @@ fn remove_from_registry(uuid: &str) -> Result<()> {
 
 // ── Subcommand handlers ───────────────────────────────────────────────────────
 
-fn read_uuid(index: &str) -> Result<String> {
-    let path = std::path::Path::new(index);
-    let idx = OuterIndex::read(path)?;
-    Ok(idx.uuid)
+fn read_uuid(vault_dir: &str) -> Result<String> {
+    let path = std::path::Path::new(vault_dir);
+    let vault = Vault::open(path)?;
+    vault
+        .meta
+        .key_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| VaultError::Other("no key_id in vault meta".to_owned()))
 }
 
 fn keyring_get(uuid: &str) -> Option<String> {

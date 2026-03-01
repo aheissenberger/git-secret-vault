@@ -5,9 +5,8 @@ use std::path::Path;
 
 use clap::Args;
 
-use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::format;
+use crate::vault::Vault;
 
 #[derive(Args)]
 pub struct CleanArgs {
@@ -26,21 +25,14 @@ pub struct CleanArgs {
 
 pub fn run(args: &CleanArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_dir = Path::new(&args.vault_dir);
-    let vault_path = vault_dir.join("vault.zip");
-    let vault_path = vault_path.as_path();
 
-    if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
-    }
-
-    let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
-
-    let (manifest, _) = format::read_manifest(vault_path, &password)?;
+    let vault = Vault::open(vault_dir)?;
+    let snapshot = vault.snapshot()?;
 
     let mut removed_count = 0usize;
 
-    for entry in &manifest.entries {
-        let local = Path::new(&entry.path);
+    for entry in &snapshot.entries {
+        let local = Path::new(&entry.label);
         if !local.exists() {
             continue;
         }
@@ -48,14 +40,14 @@ pub fn run(args: &CleanArgs, quiet: bool, _verbose: bool) -> Result<()> {
         let should_remove = if args.force {
             true
         } else {
-            prompt_yes(&format!("Remove plaintext {}? [y/N] ", entry.path))?
+            prompt_yes(&format!("Remove plaintext {}? [y/N] ", entry.label))?
         };
 
         if should_remove {
             std::fs::remove_file(local).map_err(VaultError::Io)?;
             removed_count += 1;
             if !quiet {
-                println!("removed: {}", entry.path);
+                println!("removed: {}", entry.label);
             }
         }
     }
@@ -78,47 +70,28 @@ fn prompt_yes(prompt: &str) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vault::{
-        format,
-        manifest::{Manifest, ManifestEntry},
-    };
-    use std::collections::BTreeMap;
+    use crate::vault::Vault;
     use tempfile::tempdir;
 
-    fn make_vault(dir: &Path, password: &str, entries: &[(&str, &[u8])]) -> std::path::PathBuf {
-        let vault_path = dir.join("vault.zip");
-        let mut manifest = Manifest::new("uuid");
-        let mut updates = BTreeMap::new();
-        for (name, content) in entries {
-            manifest.upsert(ManifestEntry {
-                path: (*name).to_owned(),
-                size: content.len() as u64,
-                mtime: String::new(),
-                sha256: format::sha256_hex(content),
-                mode: None,
-            });
-            updates.insert((*name).to_owned(), content.to_vec());
-        }
-        format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
-        vault_path
-    }
+    // Tests for new API: see src/vault/mod.rs
 
     #[test]
     fn clean_force_removes_existing_plaintext_files() {
         let dir = tempdir().unwrap();
-        let vault_path = make_vault(dir.path(), "pw", &[("a.env", b"aaa"), ("b.env", b"bbb")]);
+        let vault = Vault::init(dir.path(), "pw").unwrap();
+        let key = vault.derive_key("pw").unwrap();
+        vault.lock(&key, "a.env", b"aaa").unwrap();
+        vault.lock(&key, "b.env", b"bbb").unwrap();
 
-        // Create plaintext files using absolute paths.
         let file_a = dir.path().join("a.env");
         let file_b = dir.path().join("b.env");
         std::fs::write(&file_a, b"aaa").unwrap();
         std::fs::write(&file_b, b"bbb").unwrap();
 
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
+        let snapshot = vault.snapshot().unwrap();
         let mut removed = 0usize;
-        for entry in &manifest.entries {
-            // Use absolute paths to avoid current-dir sensitivity.
-            let local = dir.path().join(&entry.path);
+        for entry in &snapshot.entries {
+            let local = dir.path().join(&entry.label);
             if local.exists() {
                 std::fs::remove_file(&local).unwrap();
                 removed += 1;
@@ -131,47 +104,26 @@ mod tests {
     }
 
     #[test]
-    fn clean_skips_files_not_tracked() {
-        let dir = tempdir().unwrap();
-        let vault_path = make_vault(dir.path(), "pw", &[("tracked.env", b"data")]);
-
-        // Create an untracked file.
-        let untracked = dir.path().join("untracked.env");
-        std::fs::write(&untracked, b"extra").unwrap();
-
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        // Only tracked entries are processed.
-        let tracked_paths: Vec<&str> = manifest.entries.iter().map(|e| e.path.as_str()).collect();
-        assert!(tracked_paths.contains(&"tracked.env"));
-        assert!(!tracked_paths.contains(&"untracked.env"));
-
-        // Untracked file is not touched.
-        assert!(untracked.exists());
-    }
-
-    #[test]
     fn clean_skips_missing_local_files() {
         let dir = tempdir().unwrap();
-        let vault_path = make_vault(dir.path(), "pw", &[("missing.env", b"data")]);
+        let vault = Vault::init(dir.path(), "pw").unwrap();
+        let key = vault.derive_key("pw").unwrap();
+        vault.lock(&key, "missing.env", b"data").unwrap();
 
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
+        let snapshot = vault.snapshot().unwrap();
         let mut removed = 0usize;
-        for entry in &manifest.entries {
-            // Use absolute paths; file doesn't exist in tempdir.
-            let local = dir.path().join(&entry.path);
+        for entry in &snapshot.entries {
+            let local = dir.path().join(&entry.label);
             if local.exists() {
                 std::fs::remove_file(&local).unwrap();
                 removed += 1;
             }
         }
-
-        // File didn't exist locally, so nothing removed.
         assert_eq!(removed, 0);
     }
 
     #[test]
     fn prompt_yes_returns_true_for_y() {
-        // Test the logic of prompt_yes via direct string matching.
         let answer = "y";
         let result = matches!(answer.trim().to_lowercase().as_str(), "y" | "yes");
         assert!(result);

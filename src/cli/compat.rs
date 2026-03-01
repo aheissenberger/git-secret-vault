@@ -3,8 +3,6 @@
 // Reports encryption profile, compatible tools, unzip availability,
 // and optionally runs a self-test round-trip.
 
-use std::collections::BTreeMap;
-
 use clap::Args;
 use serde_json::json;
 
@@ -44,28 +42,17 @@ fn unzip_available() -> bool {
 /// Runs a round-trip self-test: write one entry to a temp vault and read it back.
 /// Returns `Ok(true)` on pass, `Ok(false)` on fail.
 fn run_self_test() -> Result<bool> {
-    use crate::vault::{format, manifest::Manifest};
+    use crate::vault::Vault;
     use tempfile::tempdir;
 
     let dir = tempdir().map_err(crate::error::VaultError::Io)?;
-    let vault_path = dir.path().join("compat-self-test.zip");
     let content = b"compat-self-test-payload";
     let password = "compat-test-password";
 
-    let mut manifest = Manifest::new("compat-self-test");
-    manifest.upsert(crate::vault::manifest::ManifestEntry {
-        path: "test.txt".to_owned(),
-        size: content.len() as u64,
-        mtime: String::new(),
-        sha256: format::sha256_hex(content),
-        mode: None,
-    });
-    let mut updates = BTreeMap::new();
-    updates.insert("test.txt".to_owned(), content.to_vec());
-
-    format::rewrite_vault(&vault_path, password, &updates, &manifest)?;
-
-    let read_back = format::read_entry(&vault_path, password, "test.txt")?;
+    let vault = Vault::init(dir.path(), password)?;
+    let key = vault.derive_key(password)?;
+    vault.lock(&key, "test.txt", content)?;
+    let read_back = vault.unlock(&key, "test.txt")?;
     Ok(read_back == content)
 }
 
