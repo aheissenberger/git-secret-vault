@@ -44,9 +44,10 @@ pub fn run(args: &RmArgs, quiet: bool, _verbose: bool) -> Result<()> {
 
     let (mut manifest, _) = format::read_manifest(vault_path, &password)?;
 
+    let expanded_paths = crate::fs::expand_paths(&args.paths)?;
+
     // Find which requested paths actually exist in the manifest.
-    let to_remove: Vec<String> = args
-        .paths
+    let to_remove: Vec<String> = expanded_paths
         .iter()
         .filter(|p| manifest.entries.iter().any(|e| &e.path == *p))
         .cloned()

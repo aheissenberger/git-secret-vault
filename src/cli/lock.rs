@@ -77,7 +77,7 @@ pub fn run(args: &LockArgs, quiet: bool, verbose: bool) -> Result<()> {
         }
         manifest.entries.iter().map(|e| e.path.clone()).collect()
     } else {
-        args.paths.clone()
+        crate::fs::expand_paths(&args.paths)?
     };
 
     let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
