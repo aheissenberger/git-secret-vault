@@ -40,6 +40,11 @@ pub struct UnlockArgs {
     #[arg(long)]
     pub no_prompt: bool,
 
+    /// Open $MERGE_TOOL or $EDITOR with the vault version for manual resolution.
+    /// Falls back to 'vi' if neither is set.
+    #[arg(long, conflicts_with_all = ["force", "keep_local", "keep_both", "no_prompt"])]
+    pub merge: bool,
+
     /// Skip keyring lookup and go straight to interactive prompt
     #[arg(long)]
     pub no_keyring: bool,
@@ -116,6 +121,17 @@ pub fn run(args: &UnlockArgs, quiet: bool, _verbose: bool) -> Result<()> {
                     println!("kept-both: {} → {}", entry.path, copy_name);
                 }
                 continue;
+            } else if args.merge {
+                // Open editor with vault version; write result to local path.
+                let vault_data = format::read_entry(vault_path, &password, &entry.path)?;
+                verify_hash(&vault_data, &entry.sha256, &entry.path)?;
+                let resolved = resolve_with_editor(&vault_data, &dest)?;
+                write_file(&dest, &resolved).map_err(VaultError::Io)?;
+                restore_permissions(&dest, entry.mode)?;
+                if !quiet {
+                    println!("merged: {}", entry.path);
+                }
+                continue;
             } else if args.no_prompt {
                 // Skip silently.
                 continue;
@@ -136,6 +152,29 @@ pub fn run(args: &UnlockArgs, quiet: bool, _verbose: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn resolve_with_editor(vault_content: &[u8], local_path: &Path) -> Result<Vec<u8>> {
+    let dir = tempfile::tempdir().map_err(VaultError::Io)?;
+    let tmp = dir.path().join(local_path.file_name().unwrap_or_default());
+    std::fs::write(&tmp, vault_content).map_err(VaultError::Io)?;
+
+    let editor = std::env::var("MERGE_TOOL")
+        .or_else(|_| std::env::var("EDITOR"))
+        .unwrap_or_else(|_| "vi".to_string());
+
+    let status = std::process::Command::new(&editor)
+        .arg(&tmp)
+        .status()
+        .map_err(|e| VaultError::Other(format!("failed to launch editor {editor:?}: {e}")))?;
+
+    if !status.success() {
+        return Err(VaultError::Other(
+            "editor exited with non-zero status".to_owned(),
+        ));
+    }
+
+    std::fs::read(&tmp).map_err(VaultError::Io)
 }
 
 fn verify_hash(data: &[u8], expected: &str, path: &str) -> Result<()> {
