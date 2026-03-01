@@ -7,6 +7,7 @@ pub mod harden;
 pub mod init;
 pub mod lock;
 pub mod passwd;
+pub mod policy;
 pub mod rm;
 pub mod status;
 pub mod unlock;
@@ -61,4 +62,6 @@ pub enum Commands {
     Passwd(passwd::PasswdArgs),
     /// Generate shell completions
     Completions(completions::CompletionsArgs),
+    /// Manage password policy settings
+    Policy(policy::PolicyArgs),
 }
