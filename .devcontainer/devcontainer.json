@@ -1,0 +1,15 @@
+{
+  "name": "Rust DevContainer",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  },
+  "postCreateCommand": "rustup update stable && rustup default stable && rustup component add rustfmt clippy",
+  "remoteUser": "vscode"
+}
