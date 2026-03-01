@@ -12,8 +12,8 @@
 | FR-007 |  |  |  | Git hardening and drift controls |
 | FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status}.rs |  |  | Required CLI command set |
 | FR-009 | src/cli/init.rs | scripts/manual-test-sandbox.sh |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — In Progress |
-| FR-010 | src/cli/lock.rs, src/vault/format.rs |  |  | Lock workflow behavior — In Progress |
-| FR-011 | src/cli/unlock.rs, src/fs/mod.rs |  |  | Unlock workflow and conflicts — In Progress |
+| FR-010 | src/cli/lock.rs, src/vault/format.rs | cargo test (47 tests pass) |  | Lock workflow: no-arg lock of all tracked entries, `--remove` plaintext cleanup, `--check` drift — **Done** |
+| FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
 | FR-012 | src/cli/status.rs |  |  | Status and diff behavior — In Progress |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 |  |  |  | Verify, clean, doctor, compat, harden |
@@ -21,7 +21,7 @@
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
-| FR-019 | src/cli/status.rs, src/vault/index.rs |  |  | Status behavior (split) — In Progress |
+| FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
 | FR-020 |  |  |  | Diff behavior (split) |
 | FR-021 |  |  |  | Remove behavior (split) |
 | FR-022 |  |  |  | Password rotation behavior (split) |
