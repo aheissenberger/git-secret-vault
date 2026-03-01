@@ -34,6 +34,15 @@ pub struct Config {
     /// When true, status does not reveal entry paths without a password.
     #[serde(default)]
     pub status_privacy_mode: bool,
+    /// Glob patterns for files to automatically include when running `lock` with no args.
+    #[serde(default)]
+    pub include: Vec<String>,
+    /// Glob patterns for files to always exclude from `lock` operations.
+    #[serde(default)]
+    pub exclude: Vec<String>,
+    /// Override the keyring service namespace (default: "git-secret-vault").
+    #[serde(default = "default_keyring_namespace")]
+    pub keyring_namespace: String,
 }
 
 impl Default for Config {
@@ -45,6 +54,9 @@ impl Default for Config {
             diff_tool: None,
             password_min_length: default_min_password_length(),
             status_privacy_mode: false,
+            include: Vec::new(),
+            exclude: Vec::new(),
+            keyring_namespace: default_keyring_namespace(),
         }
     }
 }
@@ -57,6 +69,9 @@ fn default_index_path() -> String {
 }
 fn default_min_password_length() -> u8 {
     8
+}
+fn default_keyring_namespace() -> String {
+    "git-secret-vault".to_owned()
 }
 
 pub const CONFIG_FILE: &str = ".git-secret-vault.toml";

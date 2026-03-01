@@ -32,6 +32,12 @@ pub enum ConfigSubcommand {
         min_password_length: Option<u8>,
         #[arg(long)]
         status_privacy_mode: Option<bool>,
+        #[arg(long)]
+        include: Option<String>,
+        #[arg(long)]
+        exclude: Option<String>,
+        #[arg(long)]
+        keyring_namespace: Option<String>,
     },
     /// Write a default config file (errors if one already exists)
     Init,
@@ -47,6 +53,9 @@ pub fn run(args: &ConfigArgs, _quiet: bool, _verbose: bool) -> Result<()> {
             diff_tool,
             min_password_length,
             status_privacy_mode,
+            include,
+            exclude,
+            keyring_namespace,
         } => cmd_set(
             vault,
             index,
@@ -54,6 +63,9 @@ pub fn run(args: &ConfigArgs, _quiet: bool, _verbose: bool) -> Result<()> {
             diff_tool,
             *min_password_length,
             *status_privacy_mode,
+            include,
+            exclude,
+            keyring_namespace,
         ),
         ConfigSubcommand::Init => cmd_init(),
     }
@@ -84,6 +96,9 @@ fn cmd_set(
     diff_tool: &Option<String>,
     min_password_length: Option<u8>,
     status_privacy_mode: Option<bool>,
+    include: &Option<String>,
+    exclude: &Option<String>,
+    keyring_namespace: &Option<String>,
 ) -> Result<()> {
     let mut cfg = Config::load_default()?;
     if let Some(v) = vault {
@@ -103,6 +118,23 @@ fn cmd_set(
     }
     if let Some(v) = status_privacy_mode {
         cfg.status_privacy_mode = v;
+    }
+    if let Some(v) = include {
+        cfg.include = if v.is_empty() {
+            Vec::new()
+        } else {
+            v.split(',').map(|s| s.trim().to_owned()).collect()
+        };
+    }
+    if let Some(v) = exclude {
+        cfg.exclude = if v.is_empty() {
+            Vec::new()
+        } else {
+            v.split(',').map(|s| s.trim().to_owned()).collect()
+        };
+    }
+    if let Some(v) = keyring_namespace {
+        cfg.keyring_namespace = v.clone();
     }
     cfg.save(Path::new(CONFIG_FILE))?;
     Ok(())

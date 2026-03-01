@@ -65,5 +65,20 @@ pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
         println!("Index:             {}", args.index);
     }
 
+    // Offer to save password to keyring (interactive only, not when stdin is consumed).
+    if !args.no_keyring && !args.password_stdin {
+        eprint!("Save password to system keyring for vault {}? [y/N] ", &vault_uuid[..8]);
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer).ok();
+        if answer.trim().eq_ignore_ascii_case("y") {
+            match keyring::Entry::new("git-secret-vault", &vault_uuid)
+                .and_then(|e| e.set_password(password.as_str()))
+            {
+                Ok(_) => eprintln!("✓ Password saved to keyring."),
+                Err(e) => eprintln!("warning: keyring save failed: {e}"),
+            }
+        }
+    }
+
     Ok(())
 }
