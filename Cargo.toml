@@ -25,6 +25,9 @@ uuid = { version = "1", features = ["v4"] }
 zip = { version = "2", features = ["aes-crypto"] }
 keyring = "3"
 zeroize = { version = "1", features = ["derive"] }
+rmcp = { version = "0.17.0", features = ["server", "transport-io"] }
+tokio = { version = "1.49.0", features = ["full"] }
+schemars = "1.2.1"
 
 # The profile that 'dist' will build with
 [profile.dist]

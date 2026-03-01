@@ -60,7 +60,7 @@
 | NFR-014 | scripts/mock-keyring.sh, scripts/run-with-keyring.sh, scripts/manual-test-sandbox.sh, scripts/manual-sandbox-shell.sh, scripts/manual-keyring-smoke.sh | bash -n scripts/mock-keyring.sh scripts/run-with-keyring.sh scripts/manual-test-sandbox.sh scripts/manual-sandbox-shell.sh scripts/manual-keyring-smoke.sh; scripts/manual-keyring-smoke.sh |  | Mock keyring backend for local integration tests with store/lookup/list/purge coverage |
 | NFR-015 | spec/AGENT.md | Test-first policy followed throughout; documented in spec/AGENT.md |  | Test-first implementation policy — **Done** |
 | NFR-016 | src/cli/mod.rs, src/cli/status.rs | scripts/manual-test-sandbox.sh |  | AI-agent automation CLI profile (deterministic JSON, non-interactive, stable exits) |
-| NFR-017 | src/cli/mod.rs |  |  | MCP 2025-11-25 server adapter pattern (CLI-first core + MCP tool interface) |
+| NFR-017 | src/mcp/mod.rs, src/cli/mod.rs, docs/mcp-server.md | cargo test | feat/mcp-server | MCP 2025-11-25 server via rmcp — vault_status/lock/unlock/verify tools on stdio — **Done** |
 | NFR-018 | .github/workflows/release.yml, packaging/homebrew/git-secret-vault.rb, scripts/update-homebrew-formula.py | push-to-main trigger; publish-homebrew job; formula update script |  | Direct-push, per-architecture GitHub Homebrew tap release automation — **Done** |
 | NFR-019 | .github/workflows/release.yml, Cargo.toml, dist-workspace.toml | dist plan shows all 4 targets, homebrew/shell/powershell installers, checksums | feat/nfr019-cargo-dist | cargo-dist release packaging and publication — **Done** |
 

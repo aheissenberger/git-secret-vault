@@ -31,8 +31,20 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
+    /// Start MCP (Model Context Protocol) server on stdio for AI assistant integration
+    #[arg(long, global = true)]
+    pub mcp: bool,
+
+    /// Vault archive path (used with --mcp)
+    #[arg(long, global = true, default_value = "vault.zip")]
+    pub vault: String,
+
+    /// Vault index path (used with --mcp)
+    #[arg(long, global = true, default_value = ".vault-index.json")]
+    pub index: String,
+
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
