@@ -65,11 +65,8 @@ pub struct RegistryEntry {
 }
 
 fn registry_path() -> std::path::PathBuf {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".to_owned());
-    std::path::PathBuf::from(home)
-        .join(".config")
+    let config_dir = dirs::config_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    config_dir
         .join("git-secret-vault")
         .join("keyring-registry.json")
 }
@@ -239,10 +236,10 @@ mod tests {
         let path = registry_path();
         let path_str = path.to_string_lossy();
         assert!(
-            path_str.contains(".config/git-secret-vault"),
-            "Expected .config/git-secret-vault in path, got: {path_str}"
+            path_str.ends_with("git-secret-vault/keyring-registry.json")
+                || path_str.ends_with("git-secret-vault\\keyring-registry.json"),
+            "Expected git-secret-vault/keyring-registry.json in path, got: {path_str}"
         );
-        assert!(path_str.ends_with("keyring-registry.json"));
     }
 
     #[test]

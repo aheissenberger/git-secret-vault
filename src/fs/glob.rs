@@ -35,18 +35,29 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
+    // These tests intentionally avoid std::env::set_current_dir because cwd is
+    // process-global and can cause flaky behavior when tests run in parallel.
+
     #[test]
     fn expand_glob_matches_files() {
         let dir = tempdir().unwrap();
-        let prev = std::env::current_dir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
-        fs::write("a.env", b"x").unwrap();
-        fs::write("b.env", b"y").unwrap();
-        fs::write("other.txt", b"z").unwrap();
-        let mut result = expand_paths(&["*.env".to_string()]).unwrap();
+        let a_path = dir.path().join("a.env");
+        let b_path = dir.path().join("b.env");
+        let other_path = dir.path().join("other.txt");
+
+        fs::write(&a_path, b"x").unwrap();
+        fs::write(&b_path, b"y").unwrap();
+        fs::write(&other_path, b"z").unwrap();
+
+        let pattern = dir.path().join("*.env").to_string_lossy().into_owned();
+        let mut result = expand_paths(&[pattern]).unwrap();
         result.sort();
-        assert_eq!(result, vec!["a.env", "b.env"]);
-        std::env::set_current_dir(prev).unwrap();
+        let mut expected = vec![
+            a_path.to_string_lossy().into_owned(),
+            b_path.to_string_lossy().into_owned(),
+        ];
+        expected.sort();
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -58,10 +69,8 @@ mod tests {
     #[test]
     fn empty_glob_returns_error() {
         let dir = tempdir().unwrap();
-        let prev = std::env::current_dir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
-        let result = expand_paths(&["*.nothing".to_string()]);
-        std::env::set_current_dir(prev).unwrap();
+        let pattern = dir.path().join("*.nothing").to_string_lossy().into_owned();
+        let result = expand_paths(&[pattern]);
         assert!(result.is_err());
     }
 }
