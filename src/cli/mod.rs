@@ -38,11 +38,11 @@ pub struct Cli {
     pub mcp: bool,
 
     /// Vault archive path (used with --mcp)
-    #[arg(long, global = true, default_value = "vault.zip")]
+    #[arg(long, global = true, default_value = "git-secret-vault.zip")]
     pub vault: String,
 
     /// Vault index path (used with --mcp)
-    #[arg(long, global = true, default_value = ".vault-index.json")]
+    #[arg(long, global = true, default_value = ".git-secret-vault.index.json")]
     pub index: String,
 
     #[command(subcommand)]

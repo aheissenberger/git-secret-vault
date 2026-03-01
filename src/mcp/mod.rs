@@ -161,8 +161,8 @@ mod tests {
 
     #[test]
     fn vault_server_constructs() {
-        let s = VaultServer::new("vault.zip", ".index.json");
-        assert_eq!(s.vault, "vault.zip");
-        assert_eq!(s.index, ".index.json");
+        let s = VaultServer::new("git-secret-vault.zip", ".git-secret-vault.index.json");
+        assert_eq!(s.vault, "git-secret-vault.zip");
+        assert_eq!(s.index, ".git-secret-vault.index.json");
     }
 }
