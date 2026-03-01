@@ -17,11 +17,35 @@
 
 ## Multi-agent worktree protocol
 
+- All parallel agent workflows must run in isolated Git worktrees; never share a checkout between active agents.
+- For each requirement claim, create a dedicated worktree from up-to-date `main` and use it for all edits, tests, and validation.
+- Suggested bootstrap: `git fetch origin && git worktree add ../gsv-<REQ-ID>-<agent> -b <branch-name> origin/main`
+- Keep each agent branch scoped to a single requirement claim unless an explicit override event allows coupling.
 - Claim requirement ownership via `spec/trace/claims/*-claim-<REQ-ID>.md`
 - Keep claims append-only with lifecycle actions: `claim`, `heartbeat`, `release`, `override`
 - Append implementation/verification events via `spec/trace/events/*.md`
 - Release ownership via a `release` claim event
 - Do not proceed on an actively claimed requirement without explicit override policy
+- After merge or abandonment, remove stale worktrees (`git worktree remove <path>`) and prune metadata (`git worktree prune`).
+
+### Quick-start commands (parallel agents)
+
+```bash
+# 1) Create isolated worktree for one agent + requirement
+git fetch origin
+git worktree add ../gsv-<REQ-ID>-<agent> -b <branch-name> origin/main
+
+# 2) Work from that checkout only
+cd ../gsv-<REQ-ID>-<agent>
+
+# 3) Keep branch fresh before merge
+git fetch origin && git rebase origin/main
+
+# 4) Cleanup after merge/cancel
+cd -
+git worktree remove ../gsv-<REQ-ID>-<agent>
+git worktree prune
+```
 
 ## Source-of-truth precedence
 

@@ -35,6 +35,8 @@
 - Use spec ledger files under `spec/`.
 - Keep one requirement file per ID with fixed frontmatter in `spec/requirements/*.md`.
 - Treat `spec/requirements/index.md` as generated output and read-only in PRs.
+- For parallel multi-agent workflows, each agent must use a dedicated Git worktree; never share a checkout between active agents.
+- Create each agent worktree from fresh `main` (example: `git fetch origin && git worktree add ../gsv-<REQ-ID>-<agent> -b <branch-name> origin/main`) and run all edits/tests from that worktree.
 - All agent changes must reference a Requirement ID.
 - Add append-only trace event files for requirement-related changes in `spec/trace/events/`.
 - Add append-only claim lifecycle files (`claim`/`heartbeat`/`release`/`override`) in `spec/trace/claims/` for requirement ownership.
@@ -44,6 +46,26 @@
 - Never mark requirements `Done` without verification evidence.
 - Do not change externally visible behavior without corresponding REQ/TRACE/ADR updates.
 - Keep worktrees fresh against `main`; stale worktrees must rebase before merge.
+- After merge or cancellation, remove no-longer-needed worktrees and prune metadata (`git worktree remove <path> && git worktree prune`).
+
+### Quick-start commands (parallel agents)
+
+```bash
+# 1) Create isolated worktree for one agent + requirement
+git fetch origin
+git worktree add ../gsv-<REQ-ID>-<agent> -b <branch-name> origin/main
+
+# 2) Work from that checkout only
+cd ../gsv-<REQ-ID>-<agent>
+
+# 3) Keep branch fresh before merge
+git fetch origin && git rebase origin/main
+
+# 4) Cleanup after merge/cancel
+cd -
+git worktree remove ../gsv-<REQ-ID>-<agent>
+git worktree prune
+```
 
 ## Mandatory Spec-Ledger Validation (Before Every Commit)
 - Agents must run all spec-ledger validation scripts and require a clean pass before each commit.
