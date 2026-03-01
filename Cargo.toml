@@ -3,6 +3,10 @@ name = "git-secret-vault"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.93"
+repository = "https://github.com/OWNER/git-secret-vault"
+description = "Encrypted secret vault stored in git using AES-256 ZIP archives"
+homepage = "https://github.com/OWNER/git-secret-vault"
+license = "MIT"
 
 [dependencies]
 anyhow = "1"
@@ -21,3 +25,8 @@ uuid = { version = "1", features = ["v4"] }
 zip = { version = "2", features = ["aes-crypto"] }
 keyring = "3"
 zeroize = { version = "1", features = ["derive"] }
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
