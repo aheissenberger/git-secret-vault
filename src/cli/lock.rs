@@ -12,13 +12,9 @@ pub struct LockArgs {
     /// Files to add to the vault (locks all tracked entries when omitted)
     pub paths: Vec<String>,
 
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
-
-    /// Path to outer index file
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Read password from stdin instead of interactive prompt
     #[arg(long)]
@@ -46,11 +42,14 @@ pub struct LockArgs {
 }
 
 pub fn run(args: &LockArgs, quiet: bool, verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-    let index_path = Path::new(&args.index);
+    let vault_dir = Path::new(&args.vault_dir);
+    let vault_path = vault_dir.join("vault.zip");
+    let index_path = vault_dir.join("index.json");
+    let vault_path = vault_path.as_path();
+    let index_path = index_path.as_path();
 
     if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
+        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
     }
 
     let password = if args.no_keyring {
@@ -226,8 +225,7 @@ mod tests {
 
         let args = LockArgs {
             paths: vec!["secret.env".to_owned()],
-            vault: vault_path.to_str().unwrap().to_owned(),
-            index: index_path.to_str().unwrap().to_owned(),
+            vault_dir: vault_path.parent().unwrap().to_str().unwrap().to_owned(),
             password_stdin: false,
             check: false,
             remove: false,
@@ -242,7 +240,8 @@ mod tests {
         let result = {
             let pw = zeroize::Zeroizing::new("pw123".to_owned());
             // Use internal logic directly: simulate run with known password.
-            let vault = std::path::Path::new(&args.vault);
+            let vault = std::path::Path::new(&args.vault_dir).join("vault.zip");
+            let vault = vault.as_path();
             let (mut manifest, _) = format::read_manifest(vault, &pw).unwrap();
             let local = std::path::Path::new("secret.env");
             let data = std::fs::read(local).unwrap();
@@ -251,10 +250,10 @@ mod tests {
             let mut updates = std::collections::BTreeMap::new();
             updates.insert("secret.env".to_owned(), data);
             let marker = format::rewrite_vault(vault, &pw, &updates, &manifest).unwrap();
-            let mut outer = OuterIndex::read(std::path::Path::new(&args.index)).unwrap();
+            let mut outer = OuterIndex::read(&index_path).unwrap();
             outer.entry_count = manifest.entries.len();
             outer.integrity_marker = marker;
-            outer.write(std::path::Path::new(&args.index)).unwrap();
+            outer.write(&index_path).unwrap();
             Ok::<(), crate::error::VaultError>(())
         };
         std::env::set_current_dir(original).unwrap();
@@ -271,8 +270,7 @@ mod tests {
 
         let args = LockArgs {
             paths: vec![],
-            vault: vault_path.to_str().unwrap().to_owned(),
-            index: index_path.to_str().unwrap().to_owned(),
+            vault_dir: vault_path.parent().unwrap().to_str().unwrap().to_owned(),
             password_stdin: false,
             check: false,
             remove: false,
@@ -319,8 +317,7 @@ mod tests {
         // No paths in args → should use manifest entries.
         let args = LockArgs {
             paths: vec![],
-            vault: vault_path.to_str().unwrap().to_owned(),
-            index: String::new(),
+            vault_dir: vault_path.to_str().unwrap().to_owned(),
             password_stdin: false,
             check: false,
             remove: false,

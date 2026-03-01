@@ -20,9 +20,7 @@ pub enum ConfigSubcommand {
     /// Update a single config setting
     Set {
         #[arg(long)]
-        vault: Option<String>,
-        #[arg(long)]
-        index: Option<String>,
+        vault_dir: Option<String>,
         /// One of: prompt, force, keep-local, keep-both
         #[arg(long)]
         conflict_default: Option<String>,
@@ -47,8 +45,7 @@ pub fn run(args: &ConfigArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     match &args.subcommand {
         ConfigSubcommand::Show { json } => cmd_show(*json),
         ConfigSubcommand::Set {
-            vault,
-            index,
+            vault_dir,
             conflict_default,
             diff_tool,
             min_password_length,
@@ -57,8 +54,7 @@ pub fn run(args: &ConfigArgs, _quiet: bool, _verbose: bool) -> Result<()> {
             exclude,
             keyring_namespace,
         } => cmd_set(
-            vault,
-            index,
+            vault_dir,
             conflict_default,
             diff_tool,
             *min_password_length,
@@ -79,8 +75,7 @@ fn cmd_show(json: bool) -> Result<()> {
     } else {
         let conflict = format!("{:?}", cfg.conflict_default).to_lowercase();
         let diff = cfg.diff_tool.as_deref().unwrap_or("(none)");
-        println!("vault:                 {}", cfg.vault);
-        println!("index:                 {}", cfg.index);
+        println!("vault_dir:             {}", cfg.vault_dir);
         println!("conflict_default:      {conflict}");
         println!("diff_tool:             {diff}");
         println!("password_min_length:   {}", cfg.password_min_length);
@@ -91,8 +86,7 @@ fn cmd_show(json: bool) -> Result<()> {
 
 #[allow(clippy::too_many_arguments)]
 fn cmd_set(
-    vault: &Option<String>,
-    index: &Option<String>,
+    vault_dir: &Option<String>,
     conflict_default: &Option<String>,
     diff_tool: &Option<String>,
     min_password_length: Option<u8>,
@@ -102,11 +96,8 @@ fn cmd_set(
     keyring_namespace: &Option<String>,
 ) -> Result<()> {
     let mut cfg = Config::load_default()?;
-    if let Some(v) = vault {
-        cfg.vault = v.clone();
-    }
-    if let Some(v) = index {
-        cfg.index = v.clone();
+    if let Some(v) = vault_dir {
+        cfg.vault_dir = v.clone();
     }
     if let Some(v) = conflict_default {
         cfg.conflict_default = parse_conflict_default(v)?;

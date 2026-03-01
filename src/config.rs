@@ -16,12 +16,9 @@ pub enum ConflictDefault {
 /// Repository-level configuration read from `.git-secret-vault.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    /// Path to the vault zip file.
-    #[serde(default = "default_vault_path")]
-    pub vault: String,
-    /// Path to the outer index file.
-    #[serde(default = "default_index_path")]
-    pub index: String,
+    /// Path to the vault directory.
+    #[serde(default = "default_vault_dir")]
+    pub vault_dir: String,
     /// Default conflict resolution for unlock.
     #[serde(default)]
     pub conflict_default: ConflictDefault,
@@ -48,8 +45,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            vault: default_vault_path(),
-            index: default_index_path(),
+            vault_dir: default_vault_dir(),
             conflict_default: ConflictDefault::default(),
             diff_tool: None,
             password_min_length: default_min_password_length(),
@@ -61,11 +57,8 @@ impl Default for Config {
     }
 }
 
-fn default_vault_path() -> String {
-    "git-secret-vault.zip".to_owned()
-}
-fn default_index_path() -> String {
-    ".git-secret-vault.index.json".to_owned()
+fn default_vault_dir() -> String {
+    ".git-secret-vault".to_owned()
 }
 fn default_min_password_length() -> u8 {
     8
@@ -108,7 +101,7 @@ mod tests {
     fn load_missing_returns_defaults() {
         let dir = tempdir().unwrap();
         let cfg = Config::load(&dir.path().join("nonexistent.toml")).unwrap();
-        assert_eq!(cfg.vault, "git-secret-vault.zip");
+        assert_eq!(cfg.vault_dir, ".git-secret-vault");
         assert_eq!(cfg.password_min_length, 8);
     }
 

@@ -12,13 +12,9 @@ pub struct UnlockArgs {
     /// Specific entries to unlock (unlocks all when omitted)
     pub paths: Vec<String>,
 
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
-
-    /// Path to outer index file (used for keyring UUID lookup)
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Read password from stdin instead of interactive prompt
     #[arg(long)]
@@ -55,16 +51,19 @@ pub struct UnlockArgs {
 }
 
 pub fn run(args: &UnlockArgs, quiet: bool, _verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
+    let vault_dir = Path::new(&args.vault_dir);
+    let vault_path = vault_dir.join("vault.zip");
+    let index_path = vault_dir.join("index.json");
+    let vault_path = vault_path.as_path();
+    let index_path = index_path.as_path();
 
     if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
+        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
     }
 
     let password = if args.no_keyring {
         crypto::get_password(args.password_stdin, "Vault password: ")?
     } else {
-        let index_path = std::path::Path::new(&args.index);
         let vault_uuid = crate::vault::index::OuterIndex::read(index_path)
             .ok()
             .map(|o| o.uuid);

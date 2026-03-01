@@ -6,17 +6,12 @@ use clap::Args;
 use serde_json::json;
 
 use crate::error::Result;
-use crate::vault::index::OuterIndex;
 
 #[derive(Args)]
 pub struct DoctorArgs {
-    /// Path to vault file to check
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
-
-    /// Path to outer index file to check
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
+    /// Path to vault directory to check
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Output machine-readable JSON
     #[arg(long)]
@@ -31,58 +26,45 @@ struct Check {
 }
 
 pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-    let index_path = Path::new(&args.index);
+    let vault_dir = Path::new(&args.vault_dir);
 
     let mut checks: Vec<Check> = Vec::new();
 
-    // 1. Vault file exists?
-    let vault_exists = vault_path.exists();
+    // 1. vault_dir exists and is a directory?
+    let dir_exists = vault_dir.is_dir();
     checks.push(Check {
-        name: "vault_file_exists",
-        ok: vault_exists,
-        description: format!("Vault file exists: {}", args.vault),
-        hint: if vault_exists {
-            None
-        } else {
-            Some(format!(
-                "Run `git-secret-vault init --vault {}` to create it.",
-                args.vault
-            ))
-        },
+        name: "vault_dir_exists",
+        ok: dir_exists,
+        description: format!("Vault directory exists: {}", args.vault_dir),
+        hint: if dir_exists { None } else { Some(format!("Run `git-secret-vault init --vault-dir {}` to create it.", args.vault_dir)) },
     });
 
-    // 2. Index file exists?
-    let index_exists = index_path.exists();
+    // 2. vault.meta.json exists?
+    let meta_path = vault_dir.join("vault.meta.json");
+    let meta_exists = meta_path.exists();
     checks.push(Check {
-        name: "index_file_exists",
-        ok: index_exists,
-        description: format!("Index file exists: {}", args.index),
-        hint: if index_exists {
-            None
-        } else {
-            Some(format!(
-                "Run `git-secret-vault init --index {}` to create it.",
-                args.index
-            ))
-        },
+        name: "vault_meta_exists",
+        ok: meta_exists,
+        description: "vault.meta.json exists".to_owned(),
+        hint: if meta_exists { None } else { Some("Run `git-secret-vault init` to initialise the vault.".to_owned()) },
     });
 
-    // 3. Index is valid JSON?
-    let index_valid = if index_exists {
-        OuterIndex::read(index_path).is_ok()
-    } else {
-        false
-    };
+    // 3. blobs/ directory exists?
+    let blobs_exists = vault_dir.join("blobs").is_dir();
     checks.push(Check {
-        name: "index_readable",
-        ok: index_valid,
-        description: "Index file is valid JSON".to_owned(),
-        hint: if index_valid {
-            None
-        } else {
-            Some("Index file is missing or corrupt. Re-initialise the vault.".to_owned())
-        },
+        name: "blobs_dir_exists",
+        ok: blobs_exists,
+        description: "blobs/ directory exists".to_owned(),
+        hint: if blobs_exists { None } else { Some("Run `git-secret-vault init` to initialise the vault.".to_owned()) },
+    });
+
+    // 4. index/ directory exists?
+    let index_dir_exists = vault_dir.join("index").is_dir();
+    checks.push(Check {
+        name: "index_dir_exists",
+        ok: index_dir_exists,
+        description: "index/ directory exists".to_owned(),
+        hint: if index_dir_exists { None } else { Some("Run `git-secret-vault init` to initialise the vault.".to_owned()) },
     });
 
     // 4. Can write to current directory?
