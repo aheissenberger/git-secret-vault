@@ -54,7 +54,7 @@
 | NFR-009 |  |  |  | Cross-platform CI matrix |
 | NFR-010 |  |  |  | Golden path integration tests |
 | NFR-011 |  |  |  | Corruption-path tests |
-| NFR-012 |  |  |  | Security-path tests |
+| NFR-012 | tests/security.rs | cargo test --test security (11 tests pass) |  | Security-path tests — **Done** |
 | NFR-013 |  |  |  | Determinism test coverage |
 | NFR-014 | scripts/mock-keyring.sh, scripts/run-with-keyring.sh, scripts/manual-test-sandbox.sh, scripts/manual-sandbox-shell.sh, scripts/manual-keyring-smoke.sh | bash -n scripts/mock-keyring.sh scripts/run-with-keyring.sh scripts/manual-test-sandbox.sh scripts/manual-sandbox-shell.sh scripts/manual-keyring-smoke.sh; scripts/manual-keyring-smoke.sh |  | Mock keyring backend for local integration tests with store/lookup/list/purge coverage |
 | NFR-015 |  |  |  | Test-first implementation policy |
