@@ -16,6 +16,10 @@ pub struct UnlockArgs {
     #[arg(long, default_value = "git-secret-vault.zip")]
     pub vault: String,
 
+    /// Path to outer index file (used for keyring UUID lookup)
+    #[arg(long, default_value = ".git-secret-vault.index.json")]
+    pub index: String,
+
     /// Read password from stdin instead of interactive prompt
     #[arg(long)]
     pub password_stdin: bool,
@@ -35,6 +39,14 @@ pub struct UnlockArgs {
     /// Skip conflicting files silently without interactive prompting
     #[arg(long)]
     pub no_prompt: bool,
+
+    /// Skip keyring lookup and go straight to interactive prompt
+    #[arg(long)]
+    pub no_keyring: bool,
+
+    /// Fail if keyring lookup does not find a credential (no interactive fallback)
+    #[arg(long)]
+    pub require_keyring: bool,
 }
 
 pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
@@ -44,7 +56,20 @@ pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
         return Err(VaultError::VaultNotFound(args.vault.clone()));
     }
 
-    let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
+    let password = if args.no_keyring {
+        crypto::get_password(args.password_stdin, "Vault password: ")?
+    } else {
+        let index_path = std::path::Path::new(&args.index);
+        let vault_uuid = crate::vault::index::OuterIndex::read(index_path)
+            .ok()
+            .map(|o| o.uuid);
+        crypto::get_password_with_keyring(
+            args.password_stdin,
+            vault_uuid.as_deref(),
+            args.require_keyring,
+            "Vault password: ",
+        )?
+    };
 
     let (manifest, _) = format::read_manifest(vault_path, &password)?;
 

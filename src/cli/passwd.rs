@@ -69,6 +69,16 @@ pub fn run(args: &PasswdArgs, quiet: bool) -> Result<()> {
         outer.integrity_marker = marker;
         outer.updated_at = chrono::Utc::now().to_rfc3339();
         outer.write(index_path)?;
+
+        // If a keyring credential exists for this vault, update it with the new password.
+        let uuid = outer.uuid.clone();
+        if let Ok(entry) = keyring::Entry::new("git-secret-vault", &uuid) {
+            if entry.get_password().is_ok() {
+                if entry.set_password(&new_password).is_ok() && !quiet {
+                    println!("✓ Updated keyring credential for vault {uuid}");
+                }
+            }
+        }
     }
 
     if !quiet {

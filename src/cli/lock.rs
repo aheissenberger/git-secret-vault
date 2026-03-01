@@ -35,6 +35,14 @@ pub struct LockArgs {
     /// Delete plaintext after lock using best-effort secure erase (overwrite before delete). NOT guaranteed on SSDs or copy-on-write filesystems.
     #[arg(long)]
     pub shred: bool,
+
+    /// Skip keyring lookup and go straight to interactive prompt
+    #[arg(long)]
+    pub no_keyring: bool,
+
+    /// Fail if keyring lookup does not find a credential (no interactive fallback)
+    #[arg(long)]
+    pub require_keyring: bool,
 }
 
 pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
@@ -45,7 +53,17 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
         return Err(VaultError::VaultNotFound(args.vault.clone()));
     }
 
-    let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
+    let password = if args.no_keyring {
+        crypto::get_password(args.password_stdin, "Vault password: ")?
+    } else {
+        let outer_for_uuid = crate::vault::index::OuterIndex::read(index_path)?;
+        crypto::get_password_with_keyring(
+            args.password_stdin,
+            Some(&outer_for_uuid.uuid),
+            args.require_keyring,
+            "Vault password: ",
+        )?
+    };
 
     // Load existing manifest (to carry forward existing entries).
     let (mut manifest, _) = format::read_manifest(vault_path, &password)?;
@@ -195,6 +213,8 @@ mod tests {
             check: false,
             remove: false,
             shred: false,
+            no_keyring: false,
+            require_keyring: false,
         };
 
         // Change to dir so relative path works.
@@ -238,8 +258,9 @@ mod tests {
             check: false,
             remove: false,
             shred: false,
+            no_keyring: false,
+            require_keyring: false,
         };
-        // Cannot call run() without password prompt, test internal logic:
         // Empty manifest + empty paths = error.
         let manifest = Manifest::new("u");
         assert!(manifest.entries.is_empty());
@@ -285,6 +306,8 @@ mod tests {
             check: false,
             remove: false,
             shred: false,
+            no_keyring: false,
+            require_keyring: false,
         };
         let (loaded_manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
         let path_strings: Vec<String> = if args.paths.is_empty() {
