@@ -58,6 +58,8 @@
 | NFR-013 |  |  |  | Determinism test coverage |
 | NFR-014 |  |  |  | Keyring integration tests |
 | NFR-015 |  |  |  | Test-first implementation policy |
+| NFR-016 | src/cli/mod.rs, src/cli/status.rs | scripts/manual-test-sandbox.sh |  | AI-agent automation CLI profile (deterministic JSON, non-interactive, stable exits) |
+| NFR-017 | src/cli/mod.rs |  |  | MCP 2025-11-25 server adapter pattern (CLI-first core + MCP tool interface) |
 
 <!--
 Populate rows where obvious. Leave unknown cells empty.
