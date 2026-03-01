@@ -3,348 +3,193 @@
 // These tests exercise the happy paths end-to-end using the library APIs
 // directly, without invoking the compiled binary.
 
-use std::collections::BTreeMap;
-
-use git_secret_vault::vault::{
-    format::{self, sha256_hex},
-    index::OuterIndex,
-    manifest::{Manifest, ManifestEntry},
-};
+use git_secret_vault::vault::Vault;
 use tempfile::tempdir;
+
+const PASSWORD: &str = "correct-horse-battery-staple-42!";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-fn make_manifest(uuid: &str) -> Manifest {
-    Manifest::new(uuid)
+fn make_vault(dir: &std::path::Path) -> Vault {
+    let vault_dir = dir.join("vault");
+    Vault::init(&vault_dir, PASSWORD).unwrap()
 }
 
-/// Build and persist an empty vault + outer index; return their paths.
-fn init_vault(
-    dir: &std::path::Path,
-    uuid: &str,
-    password: &str,
-) -> (std::path::PathBuf, std::path::PathBuf) {
-    let vault_path = dir.join("vault.zip");
-    let index_path = dir.join(".git-secret-vault.index.json");
-    let manifest = make_manifest(uuid);
-    let marker = format::rewrite_vault(&vault_path, password, &BTreeMap::new(), &manifest).unwrap();
-    let outer = OuterIndex::new(uuid, 0, marker);
-    outer.write(&index_path).unwrap();
-    (vault_path, index_path)
-}
-
-/// Lock a single named entry into an existing vault.
-fn lock_entry(
-    vault_path: &std::path::Path,
-    index_path: &std::path::Path,
-    password: &str,
-    name: &str,
-    data: &[u8],
-) {
-    let (mut manifest, _) = format::read_manifest(vault_path, password).unwrap();
-    manifest.upsert(ManifestEntry {
-        path: name.to_owned(),
-        size: data.len() as u64,
-        mtime: String::new(),
-        sha256: sha256_hex(data),
-        mode: None,
-    });
-    let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    updates.insert(name.to_owned(), data.to_vec());
-    let marker = format::rewrite_vault(vault_path, password, &updates, &manifest).unwrap();
-
-    let mut outer = OuterIndex::read(index_path).unwrap();
-    outer.entry_count = manifest.entries.len();
-    outer.integrity_marker = marker;
-    outer.updated_at = chrono::Utc::now().to_rfc3339();
-    outer.write(index_path).unwrap();
-}
-
-// ── test 1: init → lock → unlock round-trip ──────────────────────────────────
+// ── 1. Init creates the expected directory structure ──────────────────────────
 
 #[test]
-fn init_lock_unlock_roundtrip() {
+fn init_creates_directory_structure() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-1", "mypassword");
+    let vault_dir = dir.path().join("vault");
+    Vault::init(&vault_dir, PASSWORD).unwrap();
 
-    let plaintext = b"API_KEY=super-secret-value\n";
-    lock_entry(&vault_path, &index_path, "mypassword", "api.env", plaintext);
-
-    // Unlock: read entry back and verify content.
-    let recovered = format::read_entry(&vault_path, "mypassword", "api.env").unwrap();
-    assert_eq!(recovered, plaintext, "unlocked content must match original");
-
-    // Manifest must reflect the entry.
-    let (manifest, _) = format::read_manifest(&vault_path, "mypassword").unwrap();
-    assert_eq!(manifest.entries.len(), 1);
-    assert_eq!(manifest.entries[0].path, "api.env");
+    assert!(vault_dir.join("vault.meta.json").exists(), "meta file missing");
+    assert!(vault_dir.join("blobs").is_dir(), "blobs dir missing");
+    assert!(vault_dir.join("index").is_dir(), "index dir missing");
+    assert!(vault_dir.join("index").join("snapshot.json").exists(), "snapshot missing");
 }
 
-// ── test 2: lock multiple files then unlock all ───────────────────────────────
+// ── 2. Lock one entry and unlock it ──────────────────────────────────────────
 
 #[test]
-fn lock_multiple_files_then_unlock_all() {
+fn lock_and_unlock_single_entry() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-2", "multipass");
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    let files: &[(&str, &[u8])] = &[
-        ("db.env", b"DB_PASSWORD=hunter2"),
-        ("redis.env", b"REDIS_URL=redis://localhost:6379"),
-        ("aws.env", b"AWS_SECRET_ACCESS_KEY=abc123xyz"),
+    let plaintext = b"DATABASE_URL=postgres://localhost/mydb\nSECRET_KEY=abc123\n";
+    vault.lock(&key, ".env", plaintext).unwrap();
+
+    let recovered = vault.unlock(&key, ".env").unwrap();
+    assert_eq!(recovered, plaintext);
+}
+
+// ── 3. Lock multiple entries and unlock each ──────────────────────────────────
+
+#[test]
+fn lock_and_unlock_multiple_entries() {
+    let dir = tempdir().unwrap();
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
+
+    let entries = [
+        (".env", b"SECRET=value1" as &[u8]),
+        ("config/db.toml", b"password = \"secret\""),
+        ("keys/api.key", b"sk-abc123def456"),
     ];
 
-    for (name, data) in files {
-        lock_entry(&vault_path, &index_path, "multipass", name, data);
+    for (label, data) in &entries {
+        vault.lock(&key, label, data).unwrap();
     }
 
-    // Verify entry count in outer index.
-    let outer = OuterIndex::read(&index_path).unwrap();
-    assert_eq!(outer.entry_count, 3);
-
-    // Unlock each file and verify content.
-    for (name, expected) in files {
-        let recovered = format::read_entry(&vault_path, "multipass", name).unwrap();
-        assert_eq!(&recovered, expected, "content mismatch for {name}");
+    for (label, expected) in &entries {
+        let recovered = vault.unlock(&key, label).unwrap();
+        assert_eq!(recovered, *expected, "mismatch for {label}");
     }
 }
 
-// ── test 3: lock → rm → verify entry gone ────────────────────────────────────
+// ── 4. Snapshot reflects locked entries ──────────────────────────────────────
 
 #[test]
-fn lock_rm_entry_gone() {
+fn snapshot_contains_locked_entries() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-3", "rmpass");
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    lock_entry(&vault_path, &index_path, "rmpass", "keep.env", b"keep-me");
-    lock_entry(
-        &vault_path,
-        &index_path,
-        "rmpass",
-        "delete.env",
-        b"delete-me",
-    );
+    vault.lock(&key, ".env", b"A=1").unwrap();
+    vault.lock(&key, "secrets.toml", b"B=2").unwrap();
 
-    // Remove "delete.env" using the rm logic.
-    let (mut manifest, _) = format::read_manifest(&vault_path, "rmpass").unwrap();
-    manifest.entries.retain(|e| e.path != "delete.env");
-    manifest.updated_at = chrono::Utc::now().to_rfc3339();
+    let snap = vault.snapshot().unwrap();
+    assert_eq!(snap.entries.len(), 2);
 
-    // Rebuild updates: remaining entries + tombstone for deleted entry.
-    let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    for entry in &manifest.entries {
-        let data = format::read_entry(&vault_path, "rmpass", &entry.path).unwrap();
-        updates.insert(entry.path.clone(), data);
-    }
-    updates.insert("delete.env".to_owned(), Vec::new()); // tombstone
-
-    let marker = format::rewrite_vault(&vault_path, "rmpass", &updates, &manifest).unwrap();
-    let mut outer = OuterIndex::read(&index_path).unwrap();
-    outer.entry_count = manifest.entries.len();
-    outer.integrity_marker = marker;
-    outer.write(&index_path).unwrap();
-
-    // Manifest must no longer contain "delete.env".
-    let (restored, _) = format::read_manifest(&vault_path, "rmpass").unwrap();
-    assert!(
-        restored.entries.iter().all(|e| e.path != "delete.env"),
-        "delete.env must be absent from manifest"
-    );
-    assert_eq!(restored.entries.len(), 1);
-    assert_eq!(restored.entries[0].path, "keep.env");
-
-    // Outer index entry count must be updated.
-    let outer = OuterIndex::read(&index_path).unwrap();
-    assert_eq!(outer.entry_count, 1);
+    let labels: Vec<&str> = snap.entries.iter().map(|e| e.label.as_str()).collect();
+    assert!(labels.contains(&".env"), "snapshot missing .env");
+    assert!(labels.contains(&"secrets.toml"), "snapshot missing secrets.toml");
 }
 
-// ── test 4: lock → passwd → unlock with new password ─────────────────────────
+// ── 5. Update (lock same label twice) replaces the entry ──────────────────────
 
 #[test]
-fn lock_passwd_unlock_with_new_password() {
+fn update_replaces_entry_in_snapshot() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-4", "oldpass123");
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    lock_entry(
-        &vault_path,
-        &index_path,
-        "oldpass123",
-        "secret.env",
-        b"top-secret-data",
-    );
+    vault.lock(&key, ".env", b"version-1").unwrap();
+    vault.lock(&key, ".env", b"version-2").unwrap();
 
-    // Rotate password: read all entries with old password, rewrite with new.
-    let old_pw = zeroize::Zeroizing::new("oldpass123".to_owned());
-    let new_pw = zeroize::Zeroizing::new("newpass456".to_owned());
+    let snap = vault.snapshot().unwrap();
+    assert_eq!(snap.entries.len(), 1, "expected exactly 1 entry after update");
 
-    let (manifest, _) = format::read_manifest(&vault_path, &old_pw).unwrap();
-    let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    for entry in &manifest.entries {
-        let data = format::read_entry(&vault_path, &old_pw, &entry.path).unwrap();
-        updates.insert(entry.path.clone(), data);
-    }
-    let marker = format::rewrite_vault(&vault_path, &new_pw, &updates, &manifest).unwrap();
-    let mut outer = OuterIndex::read(&index_path).unwrap();
-    outer.integrity_marker = marker;
-    outer.write(&index_path).unwrap();
-
-    // Old password must fail.
-    assert!(
-        format::read_manifest(&vault_path, &old_pw).is_err(),
-        "old password must no longer work after rotation"
-    );
-
-    // New password must succeed and data must be intact.
-    let recovered = format::read_entry(&vault_path, &new_pw, "secret.env").unwrap();
-    assert_eq!(recovered, b"top-secret-data");
+    let recovered = vault.unlock(&key, ".env").unwrap();
+    assert_eq!(recovered, b"version-2");
 }
 
-// ── test 5: status shows correct entry count ─────────────────────────────────
+// ── 6. Remove entry drops it from snapshot ────────────────────────────────────
 
 #[test]
-fn status_shows_correct_entry_count() {
+fn remove_drops_entry_from_snapshot() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-5", "statuspass");
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    // Lock 4 entries.
-    for i in 0..4u8 {
-        let name = format!("file{i}.env");
-        let data = format!("VALUE={i}").into_bytes();
-        lock_entry(&vault_path, &index_path, "statuspass", &name, &data);
-    }
+    vault.lock(&key, ".env", b"to-be-deleted").unwrap();
+    vault.lock(&key, "keep.toml", b"keep-this").unwrap();
 
-    // Status (unauthenticated) reads from outer index only.
-    let outer = OuterIndex::read(&index_path).unwrap();
-    assert_eq!(outer.entry_count, 4, "outer index must report 4 entries");
+    vault.remove(&key, ".env").unwrap();
+
+    let snap = vault.snapshot().unwrap();
+    assert_eq!(snap.entries.len(), 1);
+    assert_eq!(snap.entries[0].label, "keep.toml");
 }
 
-// ── test 6: lock --check detects drift ───────────────────────────────────────
+// ── 7. Verify passes for intact vault ─────────────────────────────────────────
 
 #[test]
-fn lock_check_detects_drift() {
+fn verify_passes_for_intact_vault() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-6", "checkpass");
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    let original = b"ORIGINAL_VALUE=abc";
-    lock_entry(
-        &vault_path,
-        &index_path,
-        "checkpass",
-        "checked.env",
-        original,
-    );
+    vault.lock(&key, ".env", b"check-integrity").unwrap();
 
-    // Read manifest to get the stored hash.
-    let (manifest, _) = format::read_manifest(&vault_path, "checkpass").unwrap();
-    let entry = manifest
-        .entries
-        .iter()
-        .find(|e| e.path == "checked.env")
-        .unwrap();
-    let stored_hash = entry.sha256.clone();
-
-    // Simulate drift: plaintext has changed.
-    let modified = b"MODIFIED_VALUE=xyz";
-    let current_hash = sha256_hex(modified);
-
-    // --check logic: if hashes differ, return error.
-    let is_stale = current_hash != stored_hash;
-    assert!(is_stale, "drift must be detected when plaintext changed");
+    assert!(vault.verify(&key).is_ok(), "verify should pass for intact vault");
 }
 
-// ── test 7: lock is deterministic (FR-017 / NFR-013) ─────────────────────────
+// ── 8. Key rotation re-encrypts and allows unlock with new key ──────────────────
 
 #[test]
-fn lock_is_deterministic() {
-    // Two separate vaults locked with the same password and content must
-    // produce manifests with identical metadata, and the encrypted data must
-    // decrypt to the same plaintext.  Raw ZIP bytes differ because AES-GCM
-    // uses random nonces, so we compare logical content only.
-
-    let content = b"hello world";
-
-    // Vault A
-    let dir_a = tempdir().unwrap();
-    let file_a = dir_a.path().join("data.txt");
-    std::fs::write(&file_a, content).unwrap();
-
-    let (vault_a, index_a) = init_vault(dir_a.path(), "det-uuid-a", "det-password");
-    lock_entry(&vault_a, &index_a, "det-password", "data.txt", content);
-
-    // Vault B — second independent lock with identical inputs
-    let dir_b = tempdir().unwrap();
-    let file_b = dir_b.path().join("data.txt");
-    std::fs::write(&file_b, content).unwrap();
-
-    let (vault_b, index_b) = init_vault(dir_b.path(), "det-uuid-b", "det-password");
-    lock_entry(&vault_b, &index_b, "det-password", "data.txt", content);
-
-    // Read manifests from both vaults.
-    let (manifest_a, _) = format::read_manifest(&vault_a, "det-password").unwrap();
-    let (manifest_b, _) = format::read_manifest(&vault_b, "det-password").unwrap();
-
-    // Entry metadata must match.
-    assert_eq!(manifest_a.entries.len(), manifest_b.entries.len());
-    let entry_a = manifest_a
-        .entries
-        .iter()
-        .find(|e| e.path == "data.txt")
-        .unwrap();
-    let entry_b = manifest_b
-        .entries
-        .iter()
-        .find(|e| e.path == "data.txt")
-        .unwrap();
-
-    assert_eq!(entry_a.path, entry_b.path, "entry paths must be identical");
-    assert_eq!(
-        entry_a.sha256, entry_b.sha256,
-        "sha256 hashes must be identical"
-    );
-    assert_eq!(entry_a.size, entry_b.size, "sizes must be identical");
-    assert_eq!(entry_a.mode, entry_b.mode, "modes must be identical");
-
-    // Decrypted content must be identical.
-    let plain_a = format::read_entry(&vault_a, "det-password", "data.txt").unwrap();
-    let plain_b = format::read_entry(&vault_b, "det-password", "data.txt").unwrap();
-    assert_eq!(plain_a, plain_b, "decrypted content must be identical");
-    assert_eq!(
-        plain_a, content,
-        "decrypted content must match original plaintext"
-    );
-}
-
-// ── test 8: verify reports ok on intact vault ─────────────────────────────────
-
-#[test]
-fn verify_reports_ok_on_intact_vault() {
+fn key_rotation_allows_unlock_with_new_key() {
     let dir = tempdir().unwrap();
-    let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-7", "verifypass");
+    let vault = make_vault(dir.path());
+    let old_key = vault.derive_key(PASSWORD).unwrap();
 
-    let files: &[(&str, &[u8])] = &[
-        ("alpha.env", b"ALPHA=1"),
-        ("beta.env", b"BETA=2"),
-        ("gamma.env", b"GAMMA=3"),
-    ];
+    vault.lock(&old_key, ".env", b"rotatable-secret").unwrap();
+    vault.lock(&old_key, "config.toml", b"config-data").unwrap();
 
-    for (name, data) in files {
-        lock_entry(&vault_path, &index_path, "verifypass", name, data);
+    let new_key = [55u8; 32];
+    vault.rotate_key(&old_key, &new_key, "rotated-key-id").unwrap();
+
+    let env_data = vault.unlock(&new_key, ".env").unwrap();
+    assert_eq!(env_data, b"rotatable-secret");
+
+    let config_data = vault.unlock(&new_key, "config.toml").unwrap();
+    assert_eq!(config_data, b"config-data");
+}
+
+// ── 9. Open existing vault persists across init ───────────────────────────────
+
+#[test]
+fn open_existing_vault_reads_meta() {
+    let dir = tempdir().unwrap();
+    let vault_dir = dir.path().join("vault");
+    {
+        let vault = Vault::init(&vault_dir, PASSWORD).unwrap();
+        let key = vault.derive_key(PASSWORD).unwrap();
+        vault.lock(&key, ".env", b"persistent").unwrap();
     }
 
-    // Verify: for each manifest entry, read the stored data and check SHA-256.
-    let (manifest, _) = format::read_manifest(&vault_path, "verifypass").unwrap();
-    let mut any_failed = false;
-    for entry in &manifest.entries {
-        match format::read_entry(&vault_path, "verifypass", &entry.path) {
-            Ok(data) => {
-                let actual = sha256_hex(&data);
-                if actual != entry.sha256 {
-                    any_failed = true;
-                }
-            }
-            Err(_) => any_failed = true,
-        }
-    }
+    // Re-open the vault.
+    let vault2 = Vault::open(&vault_dir).unwrap();
+    let key2 = vault2.derive_key(PASSWORD).unwrap();
+    let recovered = vault2.unlock(&key2, ".env").unwrap();
+    assert_eq!(recovered, b"persistent");
+}
 
-    assert!(!any_failed, "all entries must verify ok on an intact vault");
-    assert_eq!(manifest.entries.len(), 3);
+// ── 10. Store idempotent for same content ──────────────────────────────────────
+
+#[test]
+fn lock_same_content_twice_is_idempotent() {
+    let dir = tempdir().unwrap();
+    let vault = make_vault(dir.path());
+    let key = vault.derive_key(PASSWORD).unwrap();
+
+    vault.lock(&key, "a.txt", b"same-content").unwrap();
+    vault.lock(&key, "a.txt", b"same-content").unwrap();
+
+    let snap = vault.snapshot().unwrap();
+    assert_eq!(snap.entries.len(), 1);
+
+    let recovered = vault.unlock(&key, "a.txt").unwrap();
+    assert_eq!(recovered, b"same-content");
 }

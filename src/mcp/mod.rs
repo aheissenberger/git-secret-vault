@@ -23,16 +23,14 @@ pub struct LockParams {
 #[derive(Clone)]
 pub struct VaultServer {
     vault: String,
-    index: String,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl VaultServer {
-    fn new(vault: impl Into<String>, index: impl Into<String>) -> Self {
+    fn new(vault: impl Into<String>) -> Self {
         Self {
             vault: vault.into(),
-            index: index.into(),
             tool_router: Self::tool_router(),
         }
     }
@@ -45,8 +43,6 @@ impl VaultServer {
                 "status",
                 "--vault",
                 &self.vault,
-                "--index",
-                &self.index,
                 "--json",
             ])
             .output()
@@ -64,7 +60,7 @@ impl VaultServer {
         Parameters(params): Parameters<LockParams>,
     ) -> Result<CallToolResult, McpError> {
         let mut cmd = std::process::Command::new(std::env::current_exe().unwrap());
-        cmd.args(["lock", "--vault", &self.vault, "--index", &self.index]);
+        cmd.args(["lock", "--vault", &self.vault]);
         let count = params.files.len();
         for f in &params.files {
             cmd.arg(f);
@@ -90,8 +86,6 @@ impl VaultServer {
                 "unlock",
                 "--vault",
                 &self.vault,
-                "--index",
-                &self.index,
                 "--force",
             ])
             .output()
@@ -112,8 +106,6 @@ impl VaultServer {
                 "verify",
                 "--vault",
                 &self.vault,
-                "--index",
-                &self.index,
                 "--json",
             ])
             .output()
@@ -142,8 +134,8 @@ impl ServerHandler for VaultServer {
 }
 
 /// Start the MCP server on stdio.
-pub async fn run_mcp_server(vault: &str, index: &str) -> crate::error::Result<()> {
-    let server = VaultServer::new(vault, index);
+pub async fn run_mcp_server(vault: &str) -> crate::error::Result<()> {
+    let server = VaultServer::new(vault);
     let service = server
         .serve(stdio())
         .await
@@ -161,8 +153,7 @@ mod tests {
 
     #[test]
     fn vault_server_constructs() {
-        let s = VaultServer::new("git-secret-vault.zip", ".git-secret-vault.index.json");
-        assert_eq!(s.vault, "git-secret-vault.zip");
-        assert_eq!(s.index, ".git-secret-vault.index.json");
+        let s = VaultServer::new(".git-secret-vault");
+        assert_eq!(s.vault, ".git-secret-vault");
     }
 }

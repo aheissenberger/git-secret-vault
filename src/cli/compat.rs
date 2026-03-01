@@ -1,26 +1,20 @@
 // Compatibility check command (FR-027).
-//
-// Reports encryption profile, compatible tools, unzip availability,
-// and optionally runs a self-test round-trip.
-
-use std::collections::BTreeMap;
 
 use clap::Args;
 use serde_json::json;
 
 use crate::error::Result;
 
-const PROFILE: &str = "AES-256 in zip AES-256-CTR (zip 2.x format)";
+const PROFILE: &str = "XChaCha20-Poly1305 / Argon2id";
 const COMPATIBLE_TOOLS: &[&str] = &[
-    "unzip 6.0+",
-    "7-Zip 19+",
-    "Python zipfile (AES extra support required)",
+    "git-secret-vault 0.2+",
+    "Any tool supporting XChaCha20-Poly1305 + Argon2id",
 ];
 
 #[derive(Args)]
 pub struct CompatArgs {
-    /// Path to vault file used for self-test (ignored unless --self-test)
-    #[arg(long, default_value = "git-secret-vault.zip")]
+    /// Path to vault directory used for self-test (ignored unless --self-test)
+    #[arg(long, default_value = ".git-secret-vault")]
     pub vault: String,
 
     /// Create a tiny test vault, write one entry, read it back, report pass/fail
@@ -41,31 +35,21 @@ fn unzip_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Runs a round-trip self-test: write one entry to a temp vault and read it back.
+/// Runs a round-trip self-test: init a vault, lock one entry, unlock it.
 /// Returns `Ok(true)` on pass, `Ok(false)` on fail.
 fn run_self_test() -> Result<bool> {
-    use crate::vault::{format, manifest::Manifest};
+    use crate::vault::Vault;
     use tempfile::tempdir;
 
     let dir = tempdir().map_err(crate::error::VaultError::Io)?;
-    let vault_path = dir.path().join("compat-self-test.zip");
+    let vault_dir = dir.path().join("compat-self-test");
     let content = b"compat-self-test-payload";
-    let password = "compat-test-password";
+    let password = "correct-horse-battery-staple-42!";
 
-    let mut manifest = Manifest::new("compat-self-test");
-    manifest.upsert(crate::vault::manifest::ManifestEntry {
-        path: "test.txt".to_owned(),
-        size: content.len() as u64,
-        mtime: String::new(),
-        sha256: format::sha256_hex(content),
-        mode: None,
-    });
-    let mut updates = BTreeMap::new();
-    updates.insert("test.txt".to_owned(), content.to_vec());
-
-    format::rewrite_vault(&vault_path, password, &updates, &manifest)?;
-
-    let read_back = format::read_entry(&vault_path, password, "test.txt")?;
+    let vault = Vault::init(&vault_dir, password)?;
+    let key = vault.derive_key(password)?;
+    vault.lock(&key, "test.txt", content)?;
+    let read_back = vault.unlock(&key, "test.txt")?;
     Ok(read_back == content)
 }
 
@@ -118,11 +102,10 @@ mod tests {
     #[test]
     fn json_output_contains_expected_keys() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault: ".git-secret-vault".to_owned(),
             self_test: false,
             json: true,
         };
-        // Capture by calling run_self_test separately and checking json shape.
         let unzip = unzip_available();
         let out = json!({
             "profile": PROFILE,
@@ -137,7 +120,6 @@ mod tests {
             COMPATIBLE_TOOLS.len()
         );
         assert_eq!(out["self_test"], "skipped");
-        // run without panicking
         run(&args, false, false).unwrap();
     }
 
@@ -150,7 +132,7 @@ mod tests {
     #[test]
     fn self_test_flag_runs_and_reports_pass() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault: ".git-secret-vault".to_owned(),
             self_test: true,
             json: false,
         };
@@ -160,7 +142,7 @@ mod tests {
     #[test]
     fn self_test_json_reports_pass() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault: ".git-secret-vault".to_owned(),
             self_test: true,
             json: true,
         };
@@ -169,7 +151,6 @@ mod tests {
 
     #[test]
     fn unzip_check_returns_bool() {
-        // Just ensure the function runs without panic.
         let _ = unzip_available();
     }
 }

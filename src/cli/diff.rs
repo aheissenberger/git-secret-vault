@@ -8,15 +8,14 @@ use sha2::{Digest, Sha256};
 
 use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::format;
 
 #[derive(Args)]
 pub struct DiffArgs {
     /// Paths to compare (compares all tracked entries if omitted)
     pub paths: Vec<String>,
 
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
     pub vault: String,
 
     /// Read password from stdin
@@ -41,40 +40,37 @@ struct EntryResult {
 }
 
 pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-    if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
-    }
+    let vault_dir = Path::new(&args.vault);
+    let vault = crate::vault::Vault::open(vault_dir)?;
 
     let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
-    let (manifest, _) = format::read_manifest(vault_path, &password)?;
+    let key = vault.derive_key(&password)?;
+    let snap = vault.snapshot()?;
 
     let cwd = std::env::current_dir().map_err(VaultError::Io)?;
     let mut results: Vec<EntryResult> = Vec::new();
 
-    // Determine which paths to process.
     let filter: Option<std::collections::HashSet<&str>> = if args.paths.is_empty() {
         None
     } else {
         Some(args.paths.iter().map(String::as_str).collect())
     };
 
-    // Process vault entries.
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    for entry in &manifest.entries {
+    for entry in &snap.entries {
         if let Some(ref f) = filter
-            && !f.contains(entry.path.as_str())
+            && !f.contains(entry.label.as_str())
         {
             continue;
         }
-        seen.insert(entry.path.clone());
+        seen.insert(entry.label.clone());
 
-        let vault_bytes = format::read_entry(vault_path, &password, &entry.path)?;
-        let local_path = cwd.join(&entry.path);
+        let vault_bytes = crate::vault::blob::load_blob(&vault.dir, &key, &entry.content_hash)?;
+        let local_path = cwd.join(&entry.label);
 
         if !local_path.exists() {
             results.push(EntryResult {
-                path: entry.path.clone(),
+                path: entry.label.clone(),
                 status: "vault-only",
                 diff: None,
                 binary: false,
@@ -86,7 +82,7 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
 
         if vault_bytes == local_bytes {
             results.push(EntryResult {
-                path: entry.path.clone(),
+                path: entry.label.clone(),
                 status: "identical",
                 diff: None,
                 binary: false,
@@ -94,31 +90,25 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
             continue;
         }
 
-        // Check if either side is binary.
         let vault_text = String::from_utf8(vault_bytes.clone());
         let local_text = String::from_utf8(local_bytes.clone());
 
         match (vault_text, local_text) {
             (Ok(vt), Ok(lt)) => {
-                let diff_str = unified_diff(&entry.path, &vt, &lt);
+                let diff_str = unified_diff(&entry.label, &vt, &lt);
                 results.push(EntryResult {
-                    path: entry.path.clone(),
+                    path: entry.label.clone(),
                     status: "modified",
-                    diff: if diff_str.is_empty() {
-                        None
-                    } else {
-                        Some(diff_str)
-                    },
+                    diff: if diff_str.is_empty() { None } else { Some(diff_str) },
                     binary: false,
                 });
             }
             _ => {
                 let vault_hash = sha256_short(&vault_bytes);
                 let local_hash = sha256_short(&local_bytes);
-                let summary =
-                    format!("Binary files differ (vault: {vault_hash}, local: {local_hash})");
+                let summary = format!("Binary files differ (vault: {vault_hash}, local: {local_hash})");
                 results.push(EntryResult {
-                    path: entry.path.clone(),
+                    path: entry.label.clone(),
                     status: "modified",
                     diff: Some(summary),
                     binary: true,
@@ -127,7 +117,6 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
         }
     }
 
-    // Handle explicitly requested paths not in the vault.
     if let Some(ref f) = filter {
         for path in f {
             if !seen.contains(*path) {
@@ -143,11 +132,7 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
 
     let has_changes = results.iter().any(|r| r.status != "identical");
 
-    // Resolve external diff tool: --tool flag > $DIFF_TOOL env var.
-    let diff_tool = args
-        .tool
-        .clone()
-        .or_else(|| std::env::var("DIFF_TOOL").ok());
+    let diff_tool = args.tool.clone().or_else(|| std::env::var("DIFF_TOOL").ok());
 
     if args.json {
         let entries: Vec<_> = results
@@ -164,11 +149,13 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
         let out = json!({ "entries": entries, "has_changes": has_changes });
         println!("{}", serde_json::to_string_pretty(&out).unwrap());
     } else if let Some(ref tool) = diff_tool {
-        // External tool mode: invoke the tool for each modified entry.
         for r in &results {
             if r.status == "modified" {
-                // Write vault version to a temp file and invoke the tool.
-                let vault_bytes = format::read_entry(vault_path, &password, &r.path)?;
+                let vault_bytes = crate::vault::blob::load_blob(
+                    &vault.dir, &key,
+                    snap.entries.iter().find(|e| e.label == r.path)
+                        .map(|e| e.content_hash.as_str()).unwrap_or("")
+                )?;
                 let local_path = cwd.join(&r.path);
                 let tmp = tempfile::Builder::new()
                     .prefix("gsv-vault-")
@@ -207,8 +194,6 @@ pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     }
 
     if has_changes {
-        // Use process::exit so the exit code propagates correctly without
-        // printing an error message.
         std::process::exit(1);
     }
 

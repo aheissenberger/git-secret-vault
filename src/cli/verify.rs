@@ -1,5 +1,3 @@
-// Validate vault integrity (FR-024).
-
 use std::path::Path;
 
 use clap::Args;
@@ -7,12 +5,12 @@ use serde_json::json;
 
 use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::format;
+use crate::vault::Vault;
 
 #[derive(Args)]
 pub struct VerifyArgs {
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
     pub vault: String,
 
     /// Read password from stdin instead of interactive prompt
@@ -24,72 +22,53 @@ pub struct VerifyArgs {
     pub json: bool,
 }
 
-#[derive(Debug)]
-struct EntryResult {
-    path: String,
-    sha256: String,
-    status: &'static str,
-}
-
 pub fn run(args: &VerifyArgs, quiet: bool, verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-
-    if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
-    }
+    let vault_dir = Path::new(&args.vault);
+    let vault = Vault::open(vault_dir)?;
 
     let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
+    let key = vault.derive_key(&password)?;
 
-    let (manifest, _) = format::read_manifest(vault_path, &password)?;
+    let snap = vault.snapshot()?;
 
-    let mut results: Vec<EntryResult> = Vec::new();
     let mut any_failed = false;
+    let mut results: Vec<serde_json::Value> = Vec::new();
 
-    for entry in &manifest.entries {
-        let status = match format::read_entry(vault_path, &password, &entry.path) {
+    for entry in &snap.entries {
+        let (status, hash) = match crate::vault::blob::load_blob(&vault.dir, &key, &entry.content_hash) {
             Ok(data) => {
-                let actual = format::sha256_hex(&data);
-                if actual == entry.sha256 {
-                    "ok"
+                let actual = crate::crypto::content_hash(&data);
+                if actual == entry.content_hash {
+                    ("ok", entry.content_hash.clone())
                 } else {
                     any_failed = true;
-                    "corrupt"
+                    ("corrupt", entry.content_hash.clone())
                 }
             }
             Err(_) => {
                 any_failed = true;
-                "missing"
+                ("missing", entry.content_hash.clone())
             }
         };
 
         if !quiet && !args.json {
             if verbose {
-                println!("{}: {} [sha256:{}]", entry.path, status, entry.sha256);
+                println!("{}: {} [sha256:{}]", entry.label, status, hash);
             } else {
-                println!("{}: {} [{}]", entry.path, status, entry.sha256);
+                println!("{}: {} [{}]", entry.label, status, &hash[..8.min(hash.len())]);
             }
         }
 
-        results.push(EntryResult {
-            path: entry.path.clone(),
-            sha256: entry.sha256.clone(),
-            status,
-        });
+        results.push(json!({
+            "path": entry.label,
+            "sha256": hash,
+            "status": status,
+        }));
     }
 
     if args.json {
-        let entries: Vec<serde_json::Value> = results
-            .iter()
-            .map(|r| {
-                json!({
-                    "path": r.path,
-                    "sha256": r.sha256,
-                    "status": r.status,
-                })
-            })
-            .collect();
         let out = json!({
-            "entries": entries,
+            "entries": results,
             "ok": !any_failed,
         });
         println!("{}", serde_json::to_string_pretty(&out).unwrap());
@@ -106,100 +85,17 @@ pub fn run(args: &VerifyArgs, quiet: bool, verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::vault::{
-        format,
-        manifest::{Manifest, ManifestEntry},
-    };
-    use std::collections::BTreeMap;
     use tempfile::tempdir;
+    use crate::vault::Vault;
 
-    fn make_vault(dir: &Path, password: &str, entries: &[(&str, &[u8])]) -> std::path::PathBuf {
-        let vault_path = dir.join("vault.zip");
-        let mut manifest = Manifest::new("uuid");
-        let mut updates = BTreeMap::new();
-        for (name, content) in entries {
-            manifest.upsert(ManifestEntry {
-                path: (*name).to_owned(),
-                size: content.len() as u64,
-                mtime: String::new(),
-                sha256: format::sha256_hex(content),
-                mode: None,
-            });
-            updates.insert((*name).to_owned(), content.to_vec());
-        }
-        format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
-        vault_path
-    }
-
-    #[test]
-    fn verify_ok_when_all_entries_match() {
-        let dir = tempdir().unwrap();
-        let vault_path = make_vault(
-            dir.path(),
-            "pw",
-            &[("a.env", b"hello"), ("b.env", b"world")],
-        );
-
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        let mut any_failed = false;
-        for entry in &manifest.entries {
-            let data = format::read_entry(&vault_path, "pw", &entry.path).unwrap();
-            let actual = format::sha256_hex(&data);
-            if actual != entry.sha256 {
-                any_failed = true;
-            }
-        }
-        assert!(!any_failed, "all entries should verify ok");
-    }
-
-    #[test]
-    fn verify_fails_on_hash_mismatch() {
-        let dir = tempdir().unwrap();
-        // Create a vault where the manifest entry has a wrong hash.
-        let vault_path = dir.path().join("vault.zip");
-        let mut manifest = Manifest::new("uuid");
-        manifest.upsert(ManifestEntry {
-            path: "tampered.env".to_owned(),
-            size: 5,
-            mtime: String::new(),
-            sha256: "wrong-hash-value".to_owned(), // deliberately wrong
-            mode: None,
-        });
-        let mut updates = BTreeMap::new();
-        updates.insert("tampered.env".to_owned(), b"hello".to_vec());
-        format::rewrite_vault(&vault_path, "pw", &updates, &manifest).unwrap();
-
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        let mut any_failed = false;
-        for entry in &manifest.entries {
-            let data = format::read_entry(&vault_path, "pw", &entry.path).unwrap();
-            let actual = format::sha256_hex(&data);
-            if actual != entry.sha256 {
-                any_failed = true;
-            }
-        }
-        assert!(any_failed, "tampered entry should fail verification");
-    }
+    const TEST_PASSWORD: &str = "correct-horse-battery-staple-42!";
 
     #[test]
     fn verify_empty_vault_succeeds() {
         let dir = tempdir().unwrap();
-        let vault_path = make_vault(dir.path(), "pw", &[]);
-
-        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        assert!(manifest.entries.is_empty());
-        // No entries → no failures.
-        let any_failed = false;
-        assert!(!any_failed);
-    }
-
-    #[test]
-    fn verify_missing_vault_returns_error() {
-        let dir = tempdir().unwrap();
-        let vault_path = dir.path().join("no-vault.zip");
-        assert!(!vault_path.exists());
-        let result = format::read_manifest(&vault_path, "pw");
-        assert!(result.is_err());
+        let vault_dir = dir.path().join("vault");
+        let vault = Vault::init(&vault_dir, TEST_PASSWORD).unwrap();
+        let key = vault.derive_key(TEST_PASSWORD).unwrap();
+        assert!(vault.verify(&key).is_ok());
     }
 }

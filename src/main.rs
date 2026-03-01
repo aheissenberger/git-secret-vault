@@ -17,7 +17,7 @@ fn main() -> Result<()> {
         tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(git_secret_vault::mcp::run_mcp_server(
-                &cli.vault, &cli.index,
+                &cli.vault,
             ))
             .unwrap_or_else(|e| {
                 eprintln!("MCP server error: {e}");

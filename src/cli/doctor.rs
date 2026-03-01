@@ -6,17 +6,13 @@ use clap::Args;
 use serde_json::json;
 
 use crate::error::Result;
-use crate::vault::index::OuterIndex;
+use crate::vault::Vault;
 
 #[derive(Args)]
 pub struct DoctorArgs {
-    /// Path to vault file to check
-    #[arg(long, default_value = "git-secret-vault.zip")]
+    /// Path to vault directory to check
+    #[arg(long, default_value = ".git-secret-vault")]
     pub vault: String,
-
-    /// Path to outer index file to check
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
 
     /// Output machine-readable JSON
     #[arg(long)]
@@ -31,18 +27,17 @@ struct Check {
 }
 
 pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-    let index_path = Path::new(&args.index);
+    let vault_dir = Path::new(&args.vault);
 
     let mut checks: Vec<Check> = Vec::new();
 
-    // 1. Vault file exists?
-    let vault_exists = vault_path.exists();
+    // 1. Vault directory exists?
+    let vault_dir_exists = vault_dir.exists();
     checks.push(Check {
-        name: "vault_file_exists",
-        ok: vault_exists,
-        description: format!("Vault file exists: {}", args.vault),
-        hint: if vault_exists {
+        name: "vault_dir_exists",
+        ok: vault_dir_exists,
+        description: format!("Vault directory exists: {}", args.vault),
+        hint: if vault_dir_exists {
             None
         } else {
             Some(format!(
@@ -52,36 +47,36 @@ pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
         },
     });
 
-    // 2. Index file exists?
-    let index_exists = index_path.exists();
+    // 2. Vault meta file exists?
+    let meta_exists = vault_dir.join("vault.meta.json").exists();
     checks.push(Check {
-        name: "index_file_exists",
-        ok: index_exists,
-        description: format!("Index file exists: {}", args.index),
-        hint: if index_exists {
+        name: "vault_meta_exists",
+        ok: meta_exists,
+        description: format!("Vault meta file exists: {}/vault.meta.json", args.vault),
+        hint: if meta_exists {
             None
         } else {
             Some(format!(
-                "Run `git-secret-vault init --index {}` to create it.",
-                args.index
+                "Run `git-secret-vault init --vault {}` to create it.",
+                args.vault
             ))
         },
     });
 
-    // 3. Index is valid JSON?
-    let index_valid = if index_exists {
-        OuterIndex::read(index_path).is_ok()
+    // 3. Vault meta is valid?
+    let meta_valid = if meta_exists {
+        Vault::open(vault_dir).is_ok()
     } else {
         false
     };
     checks.push(Check {
-        name: "index_readable",
-        ok: index_valid,
-        description: "Index file is valid JSON".to_owned(),
-        hint: if index_valid {
+        name: "vault_meta_readable",
+        ok: meta_valid,
+        description: "Vault meta file is valid JSON".to_owned(),
+        hint: if meta_valid {
             None
         } else {
-            Some("Index file is missing or corrupt. Re-initialise the vault.".to_owned())
+            Some("Vault meta file is missing or corrupt. Re-initialise the vault.".to_owned())
         },
     });
 
@@ -127,7 +122,6 @@ pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
 
     // 6. System keyring accessible?
     let keyring_ok = if crate::keyring_mock::is_mock() {
-        // Mock backend is always available
         true
     } else {
         keyring::Entry::new("git-secret-vault", "doctor-probe")
@@ -200,41 +194,23 @@ pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::vault::{format, index::OuterIndex, manifest::Manifest};
-    use std::collections::BTreeMap;
     use tempfile::tempdir;
+    use crate::vault::Vault;
+
+    const TEST_PASSWORD: &str = "correct-horse-battery-staple-42!";
 
     #[test]
     fn doctor_detects_vault_exists() {
         let dir = tempdir().unwrap();
-        let vault_path = dir.path().join("vault.zip");
-        let manifest = Manifest::new("uuid");
-        format::rewrite_vault(&vault_path, "pw", &BTreeMap::new(), &manifest).unwrap();
-        assert!(vault_path.exists());
+        Vault::init(dir.path(), TEST_PASSWORD).unwrap();
+        assert!(dir.path().join("vault.meta.json").exists());
     }
 
     #[test]
     fn doctor_detects_vault_missing() {
         let dir = tempdir().unwrap();
-        let vault_path = dir.path().join("no-vault.zip");
+        let vault_path = dir.path().join("vault.meta.json");
         assert!(!vault_path.exists());
-    }
-
-    #[test]
-    fn doctor_detects_valid_index() {
-        let dir = tempdir().unwrap();
-        let index_path = dir.path().join(".index.json");
-        let idx = OuterIndex::new("uuid", 0, "marker".to_owned());
-        idx.write(&index_path).unwrap();
-        assert!(OuterIndex::read(&index_path).is_ok());
-    }
-
-    #[test]
-    fn doctor_detects_invalid_index_json() {
-        let dir = tempdir().unwrap();
-        let index_path = dir.path().join(".index.json");
-        std::fs::write(&index_path, b"not valid json").unwrap();
-        assert!(OuterIndex::read(&index_path).is_err());
     }
 
     #[test]

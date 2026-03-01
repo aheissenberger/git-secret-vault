@@ -2,17 +2,13 @@ use clap::Args;
 
 use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::{format, index::OuterIndex, manifest::Manifest};
+use crate::vault::Vault;
 
 #[derive(Args)]
 pub struct InitArgs {
-    /// Path to vault file (default: git-secret-vault.zip)
-    #[arg(long, default_value = "git-secret-vault.zip")]
+    /// Path to vault directory (default: .git-secret-vault)
+    #[arg(long, default_value = ".git-secret-vault")]
     pub vault: String,
-
-    /// Path to outer index file (default: .git-secret-vault.index.json)
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
 
     /// Read password from stdin instead of interactive prompt
     #[arg(long)]
@@ -28,14 +24,6 @@ pub struct InitArgs {
 }
 
 pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
-    let vault_path = std::path::Path::new(&args.vault);
-    let index_path = std::path::Path::new(&args.index);
-
-    if vault_path.exists() {
-        return Err(VaultError::VaultExists(args.vault.clone()));
-    }
-
-    // Keyring lookup cannot be satisfied at init time (no UUID exists yet).
     if args.require_keyring {
         return Err(VaultError::Other(
             "--require-keyring: vault UUID is not available at init time; \
@@ -49,27 +37,19 @@ pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
     } else {
         crypto::prompt_new_password()?
     };
-    crypto::validate_password_strength(&password)?;
 
-    let vault_uuid = uuid::Uuid::new_v4().to_string();
-    let manifest = Manifest::new(&vault_uuid);
-
-    let updates = std::collections::BTreeMap::new();
-    let marker = format::rewrite_vault(vault_path, &password, &updates, &manifest)?;
-
-    let outer = OuterIndex::new(&vault_uuid, 0, marker);
-    outer.write(index_path)?;
+    let vault_dir = std::path::Path::new(&args.vault);
+    let vault = Vault::init(vault_dir, &password)?;
 
     if !quiet {
-        println!("Vault initialised: {} (UUID: {})", args.vault, vault_uuid);
-        println!("Index:             {}", args.index);
+        println!("Vault initialised: {}", args.vault);
     }
 
-    // Offer to save password to keyring (interactive only, not when stdin is consumed).
     if !args.no_keyring && !args.password_stdin {
+        let vault_uuid = vault.meta.key_ids.first().cloned().unwrap_or_default();
         eprint!(
             "Save password to system keyring for vault {}? [y/N] ",
-            &vault_uuid[..8]
+            &vault_uuid[..8.min(vault_uuid.len())]
         );
         let mut answer = String::new();
         std::io::stdin().read_line(&mut answer).ok();

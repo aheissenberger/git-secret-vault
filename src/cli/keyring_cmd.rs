@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::crypto;
 use crate::error::{Result, VaultError};
-use crate::vault::index::OuterIndex;
+use crate::vault::Vault;
 
 // ── CLI structs ──────────────────────────────────────────────────────────────
 
@@ -27,27 +27,21 @@ pub struct KeyringArgs {
 pub enum KeyringAction {
     /// Store vault password in the system keyring
     Save {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
-        index: String,
         /// Read password from stdin instead of prompting
         #[arg(long)]
         password_stdin: bool,
     },
     /// Check whether a credential exists for this vault
     Status {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
-        index: String,
     },
     /// Remove the stored credential for this vault
     Delete {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
-        #[arg(long, default_value = ".git-secret-vault.index.json")]
-        index: String,
     },
     /// List all registered vault credentials
     List,
@@ -115,10 +109,11 @@ fn remove_from_registry(uuid: &str) -> Result<()> {
 
 // ── Subcommand handlers ───────────────────────────────────────────────────────
 
-fn read_uuid(index: &str) -> Result<String> {
-    let path = std::path::Path::new(index);
-    let idx = OuterIndex::read(path)?;
-    Ok(idx.uuid)
+fn read_uuid(vault: &str) -> Result<String> {
+    let vault_dir = std::path::Path::new(vault);
+    let v = Vault::open(vault_dir)?;
+    v.meta.key_ids.first().cloned()
+        .ok_or_else(|| VaultError::Other("no key_id in vault meta".to_owned()))
 }
 
 fn keyring_get(uuid: &str) -> Option<String> {
@@ -135,13 +130,13 @@ fn keyring_delete(uuid: &str) -> Result<()> {
         .map_err(|e| VaultError::Other(format!("keyring error: {e}")))
 }
 
-fn cmd_save(vault: &str, index: &str, password_stdin: bool, no_keyring: bool) -> Result<()> {
+fn cmd_save(vault: &str, password_stdin: bool, no_keyring: bool) -> Result<()> {
     if no_keyring {
         return Err(VaultError::Other(
             "Keyring disabled via --no-keyring".to_owned(),
         ));
     }
-    let uuid = read_uuid(index)?;
+    let uuid = read_uuid(vault)?;
     let password = crypto::get_password(password_stdin, "Vault password: ")?;
     keyring_set(&uuid, &password)?;
     upsert_registry(&uuid, vault)?;
@@ -149,8 +144,8 @@ fn cmd_save(vault: &str, index: &str, password_stdin: bool, no_keyring: bool) ->
     Ok(())
 }
 
-fn cmd_status(index: &str) -> Result<()> {
-    let uuid = read_uuid(index)?;
+fn cmd_status(vault: &str) -> Result<()> {
+    let uuid = read_uuid(vault)?;
     match keyring_get(&uuid) {
         Some(_) => {
             println!("Credential found in keyring for vault {uuid}");
@@ -165,8 +160,8 @@ fn cmd_status(index: &str) -> Result<()> {
     }
 }
 
-fn cmd_delete(index: &str) -> Result<()> {
-    let uuid = read_uuid(index)?;
+fn cmd_delete(vault: &str) -> Result<()> {
+    let uuid = read_uuid(vault)?;
     keyring_delete(&uuid)?;
     remove_from_registry(&uuid)?;
     println!("Credential deleted from keyring for vault {uuid}");
@@ -201,7 +196,6 @@ fn cmd_purge() -> Result<()> {
     let entries = read_registry()?;
     let count = entries.len();
     for entry in &entries {
-        // Ignore not-found errors during purge
         let _ = keyring_delete(&entry.uuid);
     }
     write_registry(&[])?;
@@ -215,11 +209,10 @@ pub fn run(args: &KeyringArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     match &args.action {
         KeyringAction::Save {
             vault,
-            index,
             password_stdin,
-        } => cmd_save(vault, index, *password_stdin, args.no_keyring),
-        KeyringAction::Status { index, .. } => cmd_status(index),
-        KeyringAction::Delete { index, .. } => cmd_delete(index),
+        } => cmd_save(vault, *password_stdin, args.no_keyring),
+        KeyringAction::Status { vault } => cmd_status(vault),
+        KeyringAction::Delete { vault } => cmd_delete(vault),
         KeyringAction::List => cmd_list(),
         KeyringAction::Purge => cmd_purge(),
     }
@@ -247,12 +240,12 @@ mod tests {
         let entries = vec![
             RegistryEntry {
                 uuid: "test-uuid-1234".to_owned(),
-                vault_path: "my-vault.zip".to_owned(),
+                vault_path: "my-vault".to_owned(),
                 saved_at: "2026-03-01T00:00:00Z".to_owned(),
             },
             RegistryEntry {
                 uuid: "other-uuid-5678".to_owned(),
-                vault_path: "other-vault.zip".to_owned(),
+                vault_path: "other-vault".to_owned(),
                 saved_at: "2026-03-02T00:00:00Z".to_owned(),
             },
         ];
@@ -262,16 +255,13 @@ mod tests {
 
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].uuid, "test-uuid-1234");
-        assert_eq!(decoded[0].vault_path, "my-vault.zip");
+        assert_eq!(decoded[0].vault_path, "my-vault");
         assert_eq!(decoded[1].uuid, "other-uuid-5678");
     }
 
-    /// Verifies that `status` returns an error for a UUID that has no keyring credential.
-    /// Marked ignore because it interacts with the system keyring.
     #[test]
     #[ignore]
     fn status_returns_error_when_no_credential() {
-        // Use a UUID that almost certainly has no stored credential.
         let uuid = "00000000-0000-0000-0000-000000000000-nonexistent";
         let result = crate::keyring_mock::get_password(uuid);
         assert!(result.is_none(), "Expected no credential for fake UUID");
