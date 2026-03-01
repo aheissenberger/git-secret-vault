@@ -27,7 +27,7 @@ pub struct KeyringArgs {
 pub enum KeyringAction {
     /// Store vault password in the system keyring
     Save {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
         #[arg(long, default_value = ".git-secret-vault")]
         index: String,
@@ -37,14 +37,14 @@ pub enum KeyringAction {
     },
     /// Check whether a credential exists for this vault
     Status {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
         #[arg(long, default_value = ".git-secret-vault")]
         index: String,
     },
     /// Remove the stored credential for this vault
     Delete {
-        #[arg(long, default_value = "git-secret-vault.zip")]
+        #[arg(long, default_value = ".git-secret-vault")]
         vault: String,
         #[arg(long, default_value = ".git-secret-vault")]
         index: String,
@@ -252,12 +252,12 @@ mod tests {
         let entries = vec![
             RegistryEntry {
                 uuid: "test-uuid-1234".to_owned(),
-                vault_path: "my-vault.zip".to_owned(),
+                vault_path: ".git-secret-vault".to_owned(),
                 saved_at: "2026-03-01T00:00:00Z".to_owned(),
             },
             RegistryEntry {
                 uuid: "other-uuid-5678".to_owned(),
-                vault_path: "other-vault.zip".to_owned(),
+                vault_path: ".git-secret-vault-other".to_owned(),
                 saved_at: "2026-03-02T00:00:00Z".to_owned(),
             },
         ];
@@ -267,7 +267,7 @@ mod tests {
 
         assert_eq!(decoded.len(), 2);
         assert_eq!(decoded[0].uuid, "test-uuid-1234");
-        assert_eq!(decoded[0].vault_path, "my-vault.zip");
+        assert_eq!(decoded[0].vault_path, ".git-secret-vault");
         assert_eq!(decoded[1].uuid, "other-uuid-5678");
     }
 

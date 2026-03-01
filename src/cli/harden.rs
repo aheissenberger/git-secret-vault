@@ -10,7 +10,7 @@ use crate::error::{Result, VaultError};
 const SENSITIVE_PATTERNS: &[&str] = &["*.env", "*.key", "*.pem", "*.secret"];
 
 /// Vault-specific files that must NOT be ignored (they need to be committed).
-const VAULT_FILES: &[&str] = &["git-secret-vault.zip", ".git-secret-vault.index.json"];
+const VAULT_FILES: &[&str] = &[".git-secret-vault"];
 
 const PRE_COMMIT_SCRIPT: &str = r#"#!/bin/sh
 # Installed by git-secret-vault harden
