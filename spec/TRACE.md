@@ -22,7 +22,7 @@
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
-| FR-020 |  |  |  | Diff behavior (split) |
+| FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** |
 | FR-021 | src/cli/rm.rs | cargo test (80 unit tests pass) |  | Remove vault entries with optional local plaintext deletion — **Done** |
 | FR-022 | src/cli/passwd.rs | cargo test (80 unit tests pass) |  | Re-encrypt vault with new password, atomic rewrite, --rotate checklist — **Done** |
 | FR-023 |  |  |  | Keyring behavior (split) |

@@ -21,6 +21,7 @@ fn main() -> Result<()> {
         Commands::Doctor(args) => cli::doctor::run(args, cli.quiet),
         Commands::Harden(args) => cli::harden::run(args, cli.quiet),
         Commands::Passwd(args) => cli::passwd::run(args, cli.quiet),
+        Commands::Diff(args) => cli::diff::run(args, cli.quiet),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

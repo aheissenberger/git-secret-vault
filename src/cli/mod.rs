@@ -1,4 +1,5 @@
 pub mod clean;
+pub mod diff;
 pub mod doctor;
 pub mod harden;
 pub mod init;
@@ -49,6 +50,8 @@ pub enum Commands {
     Doctor(doctor::DoctorArgs),
     /// Update .gitignore and optionally install git hooks
     Harden(harden::HardenArgs),
+    /// Show differences between vault entries and local files
+    Diff(diff::DiffArgs),
     /// Re-encrypt vault with a new password
     Passwd(passwd::PasswdArgs),
 }
