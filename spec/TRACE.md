@@ -19,7 +19,7 @@
 | FR-014 | src/cli/verify.rs, src/cli/clean.rs, src/cli/doctor.rs, src/cli/compat.rs, src/cli/harden.rs | cargo test |  | Verify, clean, doctor, compat, harden — **Done** |
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
 | FR-016 | src/cli/doctor.rs, docs/exit-codes.md |  |  | Output safety, CI, UX, exit codes — **Done** (doctor --json, exit-code contract) |
-| FR-017 |  |  |  | Test/release quality requirements |
+| FR-017 | tests/golden_path.rs (lock_is_deterministic), tests/security.rs (keyring_entry_new_does_not_panic) | cargo test --test golden_path, cargo test --test security |  | Test/release quality requirements — **Done** |
 | FR-018 | README.md, docs/format-spec.md |  | ADR-0002 | Documentation and locked decisions — **Done** |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
 | FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** (FR-020) |

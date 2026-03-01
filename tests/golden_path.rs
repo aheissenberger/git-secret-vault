@@ -230,7 +230,55 @@ fn lock_check_detects_drift() {
     assert!(is_stale, "drift must be detected when plaintext changed");
 }
 
-// ── test 7: verify reports ok on intact vault ─────────────────────────────────
+// ── test 7: lock is deterministic (FR-017 / NFR-013) ─────────────────────────
+
+#[test]
+fn lock_is_deterministic() {
+    // Two separate vaults locked with the same password and content must
+    // produce manifests with identical metadata, and the encrypted data must
+    // decrypt to the same plaintext.  Raw ZIP bytes differ because AES-GCM
+    // uses random nonces, so we compare logical content only.
+
+    let content = b"hello world";
+
+    // Vault A
+    let dir_a = tempdir().unwrap();
+    let file_a = dir_a.path().join("data.txt");
+    std::fs::write(&file_a, content).unwrap();
+
+    let (vault_a, index_a) = init_vault(dir_a.path(), "det-uuid-a", "det-password");
+    lock_entry(&vault_a, &index_a, "det-password", "data.txt", content);
+
+    // Vault B — second independent lock with identical inputs
+    let dir_b = tempdir().unwrap();
+    let file_b = dir_b.path().join("data.txt");
+    std::fs::write(&file_b, content).unwrap();
+
+    let (vault_b, index_b) = init_vault(dir_b.path(), "det-uuid-b", "det-password");
+    lock_entry(&vault_b, &index_b, "det-password", "data.txt", content);
+
+    // Read manifests from both vaults.
+    let (manifest_a, _) = format::read_manifest(&vault_a, "det-password").unwrap();
+    let (manifest_b, _) = format::read_manifest(&vault_b, "det-password").unwrap();
+
+    // Entry metadata must match.
+    assert_eq!(manifest_a.entries.len(), manifest_b.entries.len());
+    let entry_a = manifest_a.entries.iter().find(|e| e.path == "data.txt").unwrap();
+    let entry_b = manifest_b.entries.iter().find(|e| e.path == "data.txt").unwrap();
+
+    assert_eq!(entry_a.path, entry_b.path, "entry paths must be identical");
+    assert_eq!(entry_a.sha256, entry_b.sha256, "sha256 hashes must be identical");
+    assert_eq!(entry_a.size, entry_b.size, "sizes must be identical");
+    assert_eq!(entry_a.mode, entry_b.mode, "modes must be identical");
+
+    // Decrypted content must be identical.
+    let plain_a = format::read_entry(&vault_a, "det-password", "data.txt").unwrap();
+    let plain_b = format::read_entry(&vault_b, "det-password", "data.txt").unwrap();
+    assert_eq!(plain_a, plain_b, "decrypted content must be identical");
+    assert_eq!(plain_a, content, "decrypted content must match original plaintext");
+}
+
+// ── test 8: verify reports ok on intact vault ─────────────────────────────────
 
 #[test]
 fn verify_reports_ok_on_intact_vault() {
