@@ -16,20 +16,20 @@
 | FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
 | FR-012 | src/cli/status.rs |  |  | Status and diff behavior — In Progress |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
-| FR-014 |  |  |  | Verify, clean, doctor, compat, harden |
+| FR-014 | src/cli/verify.rs, src/cli/clean.rs, src/cli/doctor.rs, src/cli/compat.rs, src/cli/harden.rs | cargo test |  | Verify, clean, doctor, compat, harden — **Done** |
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
-| FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** |
+| FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** (FR-020) |
 | FR-021 | src/cli/rm.rs | cargo test (80 unit tests pass) |  | Remove vault entries with optional local plaintext deletion — **Done** |
 | FR-022 | src/cli/passwd.rs | cargo test (80 unit tests pass) |  | Re-encrypt vault with new password, atomic rewrite, --rotate checklist — **Done** |
 | FR-023 |  |  |  | Keyring behavior (split) |
 | FR-024 | src/cli/verify.rs | cargo test (80 unit tests pass) |  | Validate vault integrity per-entry with hash verification and --json output — **Done** |
 | FR-025 | src/cli/clean.rs | cargo test (80 unit tests pass) |  | Remove tracked plaintext files safely with per-file prompt and --force flag — **Done** |
 | FR-026 | src/cli/doctor.rs | cargo test (80 unit tests pass) |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH — **Done** |
-| FR-027 | src/cli/compat.rs |  |  | Compatibility-check behavior (split) |
+| FR-027 | src/cli/compat.rs | cargo test |  | Compatibility-check behavior — **Done** |
 | FR-028 | src/cli/harden.rs | cargo test (80 unit tests pass) |  | Update .gitignore with sensitive patterns; install pre-commit hook; --dry-run — **Done** |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 | src/crypto/mod.rs (validate_password_strength) |  |  | Password policy minimums |
