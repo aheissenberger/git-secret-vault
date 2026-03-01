@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "${GSV_KEYRING_SESSION_ACTIVE:-0}" != "1" ]]; then
+  exec "$SCRIPT_DIR/run-with-keyring.sh" "$0" "$@"
+fi
+
 BIN_DEFAULT="/workspaces/git-secret-vault/target/debug/git-secret-vault"
 BIN="${GSV_BIN:-$BIN_DEFAULT}"
 SANDBOX=""
