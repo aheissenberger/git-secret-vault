@@ -9,7 +9,7 @@ ADR-0002-title.md
 Current ADR files:
 
 - `ADR-0001-template.md`
-- `ADR-0002-safezipvault-safety-and-compatibility.md`
+- `ADR-0002-git-secret-vault-safety-and-compatibility.md`
 
 ## Create or update ADR when
 

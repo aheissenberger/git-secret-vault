@@ -1,4 +1,4 @@
-# Requirements Specification: SafeZipVault CLI (Max-Safety, Always-Decryptable ZIP)
+# Requirements Specification: GitSecretVault CLI (Max-Safety, Always-Decryptable ZIP)
 
 > ⚠️ **Note**: This document exists for historical reasons and should not be used by AI agents for code generation or implementation decisions. It may contain outdated information, superseded design choices, or constraints that are no longer relevant. Please refer to the current implementation and active design documentation instead.
 
@@ -40,7 +40,7 @@ The UX and command set should be broadly comparable to `lockenv` (init → lock 
 
 ## 3. Terminology
 
-* **Vault**: Encrypted ZIP archive committed to VCS (default: `.safezipvault.zip`).
+* **Vault**: Encrypted ZIP archive committed to VCS (default: `.git-secret-vault.zip`).
 * **Working secrets**: Plaintext files in working directory (e.g., `.env`, `config/keys.json`).
 * **Tracked entry**: A path listed in the vault index/manifest.
 * **Index**: A minimal, non-secret metadata file stored alongside the vault for safety UX (optional but recommended) without exposing file names.
@@ -102,7 +102,7 @@ Because encrypted ZIP still may expose some structure depending on tooling, the 
   * NO filenames or paths
 
 **SEC-META-1**: Default configuration MUST NOT expose filenames/paths without password.
-**FR-IDX-1**: Provide `.safezipvault.index` (name configurable) as the minimal non-secret index.
+**FR-IDX-1**: Provide `.git-secret-vault.index` (name configurable) as the minimal non-secret index.
 
 > Note: Users can still unzip with a password and see filenames after decryption—this is acceptable and consistent with “unzip works.” The safety requirement is to avoid revealing names/paths without password.
 
@@ -378,7 +378,7 @@ The CLI MUST implement at least:
 
 ### 10.1 Config File
 
-**FR-CFG-1**: Support repo-level config file (e.g., `.safezipvault.toml`) with:
+**FR-CFG-1**: Support repo-level config file (e.g., `.git-secret-vault.toml`) with:
 
 * vault path
 * index path

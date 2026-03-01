@@ -22,7 +22,7 @@ Paste or move original requirement content here during migration if needed.
 
 ## Migration Snapshot
 
-- SafeZipVault source specification has been normalized into repository-native records under `spec/requirements/`.
+- GitSecretVault source specification has been normalized into repository-native records under `spec/requirements/`.
 - First split pass created `FR-002` through `FR-018` as domain-grouped requirements.
 - Second split pass added finer command-focused records `FR-019` through `FR-028`.
 - Third split pass added atomic security/non-functional records `SEC-001` through `SEC-012` and `NFR-001` through `NFR-014`.

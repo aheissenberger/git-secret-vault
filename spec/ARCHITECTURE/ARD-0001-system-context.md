@@ -6,7 +6,7 @@ Accepted
 
 ## Purpose
 
-Provide a stable architecture baseline so agents can reason about SafeZipVault implementation and process constraints without reverse-engineering details.
+Provide a stable architecture baseline so agents can reason about GitSecretVault implementation and process constraints without reverse-engineering details.
 
 ## Runtime and Toolchain
 
@@ -32,7 +32,7 @@ Provide a stable architecture baseline so agents can reason about SafeZipVault i
 ## Linked ADRs
 
 - spec/DECISIONS/ADR-0001-template.md
-- spec/DECISIONS/ADR-0002-safezipvault-safety-and-compatibility.md
+- spec/DECISIONS/ADR-0002-git-secret-vault-safety-and-compatibility.md
 
 ## Requirement Links
 

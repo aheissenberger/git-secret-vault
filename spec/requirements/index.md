@@ -10,7 +10,7 @@ Source of truth: `spec/requirements/*.md`
 - FR-005 | Proposed | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
 - FR-006 | Proposed | Enforce safe filesystem handling for extraction, symlink policy, permissions restoration, and plaintext cleanup operations.
 - FR-007 | Proposed | Provide repository hardening and drift controls to prevent accidental plaintext commits and CI drift regressions.
-- FR-008 | Proposed | Implement the required SafeZipVault CLI command surface and aliases.
+- FR-008 | Proposed | Implement the required GitSecretVault CLI command surface and aliases.
 - FR-009 | Proposed | `init` creates vault artifacts, establishes identity metadata, and supports secure bootstrap password/keyring flow.
 - FR-010 | Proposed | `lock` encrypts tracked content into the vault with deterministic/atomic behavior and optional plaintext cleanup.
 - FR-011 | Proposed | `unlock` safely restores selected secrets with explicit conflict policies and atomic per-file writes.
@@ -19,7 +19,7 @@ Source of truth: `spec/requirements/*.md`
 - FR-014 | Proposed | Deliver maintenance and diagnostics commands for integrity checks, cleanup safety, environment diagnostics, and hardening/compatibility flows.
 - FR-015 | Proposed | Provide repository configuration and local state persistence that support safe automation and privacy-preserving status behavior.
 - FR-016 | Proposed | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
-- FR-017 | Proposed | Establish release-quality verification matrix and supply-chain deliverables for SafeZipVault.
+- FR-017 | Proposed | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
 - FR-018 | Proposed | Document operator guidance and preserve locked design decisions as immutable product-level constraints.
 - FR-019 | Proposed | `status` must provide privacy-preserving state checks without password and enhanced verification with password.
 - FR-020 | Proposed | `diff` must be password-gated and provide text/binary diff behavior with tool integration and JSON summary.

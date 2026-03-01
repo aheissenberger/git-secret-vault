@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(
     name = "git-secret-vault",
-    about = "SafeZipVault – encrypted secret vault for git repos"
+    about = "GitSecretVault – encrypted secret vault for git repos"
 )]
 pub struct Cli {
     /// Suppress non-error output

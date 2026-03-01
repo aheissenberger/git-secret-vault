@@ -1,4 +1,4 @@
-# ADR-0002 SafeZipVault Safety and Compatibility Constraints
+# ADR-0002 GitSecretVault Safety and Compatibility Constraints
 
 ## Status
 
@@ -6,7 +6,7 @@ Proposed
 
 ## Context
 
-SafeZipVault has two non-negotiable product constraints:
+GitSecretVault has two non-negotiable product constraints:
 
 1. Max-safety defaults to reduce accidental plaintext exposure and unsafe extraction behavior.
 2. Vault artifacts remain standards-compatible encrypted ZIP files decryptable by common unzip tools supporting the selected encryption profile.
