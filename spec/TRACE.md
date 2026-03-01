@@ -48,10 +48,10 @@
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 |  |  |  | Shell completion UX |
 | NFR-005 |  |  |  | Editor/pager UX integration |
-| NFR-006 |  |  |  | Signed release artifacts |
+| NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts |
 | NFR-007 |  |  |  | SBOM release artifact |
-| NFR-008 |  |  |  | Reproducible build documentation |
-| NFR-009 |  |  |  | Cross-platform CI matrix |
+| NFR-008 | docs/reproducible-build.md |  |  | Reproducible build documentation |
+| NFR-009 | .github/workflows/ci.yml |  |  | Cross-platform CI matrix |
 | NFR-010 | tests/golden_path.rs | cargo test --test golden_path |  | Golden path integration tests |
 | NFR-011 | tests/corruption.rs | cargo test --test corruption |  | Corruption-path tests |
 | NFR-012 | tests/security.rs | cargo test --test security |  | Security-path tests |
