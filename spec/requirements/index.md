@@ -48,6 +48,7 @@ Source of truth: `spec/requirements/*.md`
 - NFR-015 | Done | Tests must be created or updated before implementation code changes are added.
 - NFR-016 | Done | Optimize CLI automation ergonomics for AI agents and non-interactive orchestrators.
 - NFR-017 | Done | Provide an MCP server interface aligned to MCP 2025-11-25 while preserving CLI as execution core.
+- NFR-018 | Proposed | Create a GitHub Actions release workflow that publishes GitSecretVault to a GitHub Homebrew tap on direct pushes, with architecture-specific release outputs.
 - SEC-001 | Done | Default configuration must not expose secret filenames or paths without password access.
 - SEC-002 | Done | Enforce configurable minimum password policy with secure defaults.
 - SEC-003 | Done | Expose password policy inspection and update controls through configuration workflows.
