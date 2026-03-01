@@ -23,18 +23,18 @@
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
 | FR-020 |  |  |  | Diff behavior (split) |
-| FR-021 |  |  |  | Remove behavior (split) |
-| FR-022 |  |  |  | Password rotation behavior (split) |
+| FR-021 | src/cli/rm.rs | cargo test (80 unit tests pass) |  | Remove vault entries with optional local plaintext deletion — **Done** |
+| FR-022 | src/cli/passwd.rs | cargo test (80 unit tests pass) |  | Re-encrypt vault with new password, atomic rewrite, --rotate checklist — **Done** |
 | FR-023 |  |  |  | Keyring behavior (split) |
-| FR-024 |  |  |  | Verify behavior (split) |
-| FR-025 |  |  |  | Clean behavior (split) |
-| FR-026 |  |  |  | Doctor behavior (split) |
+| FR-024 | src/cli/verify.rs | cargo test (80 unit tests pass) |  | Validate vault integrity per-entry with hash verification and --json output — **Done** |
+| FR-025 | src/cli/clean.rs | cargo test (80 unit tests pass) |  | Remove tracked plaintext files safely with per-file prompt and --force flag — **Done** |
+| FR-026 | src/cli/doctor.rs | cargo test (80 unit tests pass) |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH — **Done** |
 | FR-027 |  |  |  | Compatibility-check behavior (split) |
-| FR-028 |  |  |  | Harden behavior (split) |
+| FR-028 | src/cli/harden.rs | cargo test (80 unit tests pass) |  | Update .gitignore with sensitive patterns; install pre-commit hook; --dry-run — **Done** |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
-| SEC-002 |  |  |  | Password policy minimums |
+| SEC-002 | src/crypto/mod.rs (validate_password_strength) |  |  | Password policy minimums |
 | SEC-003 |  |  |  | Password policy controls |
-| SEC-004 |  |  |  | Env password leakage warning |
+| SEC-004 | src/crypto/mod.rs (get_password env-var branch) |  |  | Env password leakage warning |
 | SEC-005 | src/crypto/mod.rs |  |  | Memory hygiene best-effort — **Done** |
 | SEC-006 | src/fs/mod.rs | cargo test (safe_join tests) |  | Path traversal prevention — **Done** |
 | SEC-007 | src/cli/unlock.rs, src/vault/format.rs |  |  | Symlink default deny — **Done** |

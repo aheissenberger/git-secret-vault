@@ -34,11 +34,62 @@ pub fn prompt_new_password() -> Result<Zeroizing<String>> {
     }
 }
 
-/// Obtain password either from stdin or interactively.
+/// Obtain password either from stdin, env var, or interactively.
+///
+/// If `VAULT_PASSWORD` is set and `from_stdin` is false, the env-var value is
+/// used but a warning is emitted to stderr (SEC-004).
 pub fn get_password(from_stdin: bool, prompt: &str) -> Result<Zeroizing<String>> {
     if from_stdin {
         read_password_stdin()
+    } else if let Ok(val) = std::env::var("VAULT_PASSWORD") {
+        eprintln!(
+            "warning: Using VAULT_PASSWORD environment variable exposes password via \
+             process environment and system logs. Consider using --password-stdin instead."
+        );
+        Ok(Zeroizing::new(val))
     } else {
         prompt_password(prompt)
+    }
+}
+
+/// Validate that a password meets the minimum strength requirements (SEC-002).
+///
+/// Call this after obtaining a password for *write* operations (lock/init).
+/// Do NOT call it for unlock/verify (read) operations.
+#[allow(dead_code)]
+pub fn validate_password_strength(password: &str) -> Result<()> {
+    if password.len() < 8 {
+        return Err(VaultError::Other(
+            "Password must be at least 8 characters".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_password_strength_accepts_long_enough() {
+        assert!(validate_password_strength("12345678").is_ok());
+        assert!(validate_password_strength("correct horse battery staple").is_ok());
+    }
+
+    #[test]
+    fn validate_password_strength_rejects_short() {
+        let err = validate_password_strength("short").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("at least 8 characters"), "got: {msg}");
+    }
+
+    #[test]
+    fn validate_password_strength_rejects_empty() {
+        assert!(validate_password_strength("").is_err());
+    }
+
+    #[test]
+    fn validate_password_strength_rejects_exactly_seven() {
+        assert!(validate_password_strength("1234567").is_err());
     }
 }

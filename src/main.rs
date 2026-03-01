@@ -15,6 +15,12 @@ fn main() -> Result<()> {
         Commands::Lock(args) => cli::lock::run(args, cli.quiet),
         Commands::Unlock(args) => cli::unlock::run(args, cli.quiet),
         Commands::Status(args) => cli::status::run(args, cli.quiet),
+        Commands::Rm(args) => cli::rm::run(args, cli.quiet),
+        Commands::Verify(args) => cli::verify::run(args, cli.quiet),
+        Commands::Clean(args) => cli::clean::run(args, cli.quiet),
+        Commands::Doctor(args) => cli::doctor::run(args, cli.quiet),
+        Commands::Harden(args) => cli::harden::run(args, cli.quiet),
+        Commands::Passwd(args) => cli::passwd::run(args, cli.quiet),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

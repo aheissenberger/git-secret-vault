@@ -1,7 +1,13 @@
+pub mod clean;
+pub mod doctor;
+pub mod harden;
 pub mod init;
 pub mod lock;
+pub mod passwd;
+pub mod rm;
 pub mod status;
 pub mod unlock;
+pub mod verify;
 
 use clap::{Parser, Subcommand};
 
@@ -33,4 +39,16 @@ pub enum Commands {
     Unlock(unlock::UnlockArgs),
     /// Show vault status without requiring password
     Status(status::StatusArgs),
+    /// Remove entries from the vault
+    Rm(rm::RmArgs),
+    /// Validate vault integrity
+    Verify(verify::VerifyArgs),
+    /// Remove unlocked tracked plaintext files safely
+    Clean(clean::CleanArgs),
+    /// Diagnose environment readiness
+    Doctor(doctor::DoctorArgs),
+    /// Update .gitignore and optionally install git hooks
+    Harden(harden::HardenArgs),
+    /// Re-encrypt vault with a new password
+    Passwd(passwd::PasswdArgs),
 }
