@@ -7,7 +7,7 @@ Source of truth: `spec/requirements/*.md`
 - FR-002 | Done | Use a standards-compatible encrypted ZIP vault with built-in CLI crypto operations and explicit compatibility checks.
 - FR-003 | Done | Minimize metadata leakage by default and expose only a minimal non-secret outer index.
 - FR-004 | Done | Store an encrypted manifest in-vault and enforce deterministic, atomic vault update behavior.
-- FR-005 | In Progress | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
+- FR-005 | Done | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
 - FR-006 | Done | Enforce safe filesystem handling for extraction, symlink policy, permissions restoration, and plaintext cleanup operations.
 - FR-007 | Done | Provide repository hardening and drift controls to prevent accidental plaintext commits and CI drift regressions.
 - FR-008 | Done | Implement the required GitSecretVault CLI command surface and aliases.
@@ -15,11 +15,11 @@ Source of truth: `spec/requirements/*.md`
 - FR-010 | Done | `lock` encrypts tracked content into the vault with deterministic/atomic behavior and optional plaintext cleanup.
 - FR-011 | Done | `unlock` safely restores selected secrets with explicit conflict policies and atomic per-file writes.
 - FR-012 | Done | `status` and `diff` provide safe introspection in passwordless and authenticated modes, with machine-readable output.
-- FR-013 | In Progress | Support secure lifecycle operations for entry removal, password rotation, and cross-platform keyring management.
+- FR-013 | Done | Support secure lifecycle operations for entry removal, password rotation, and cross-platform keyring management.
 - FR-014 | Done | Deliver maintenance and diagnostics commands for integrity checks, cleanup safety, environment diagnostics, and hardening/compatibility flows.
 - FR-015 | Done | Provide repository configuration and local state persistence that support safe automation and privacy-preserving status behavior.
-- FR-016 | In Progress | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
-- FR-017 | In Progress | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
+- FR-016 | Done | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
+- FR-017 | Done | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
 - FR-018 | Done | Document operator guidance and preserve locked design decisions as immutable product-level constraints.
 - FR-019 | Done | `status` must provide privacy-preserving state checks without password and enhanced verification with password.
 - FR-020 | Done | `diff` must be password-gated and provide text/binary diff behavior with tool integration and JSON summary.
