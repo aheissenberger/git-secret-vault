@@ -31,7 +31,7 @@ Source of truth: `spec/requirements/*.md`
 - FR-026 | Done | `doctor` must diagnose environment readiness and provide remediation guidance.
 - FR-027 | Done | `compat check` must make compatibility risk visible before decryption workflows fail in user environments.
 - FR-028 | Done | `harden` must automate repository safety defaults and hook-based guardrails.
-- FR-029 | Proposed | The CLI must provide a version flag that prints the tool name and version, then exits successfully.
+- FR-029 | Done | The CLI must provide a version flag that prints the tool name and version, then exits successfully.
 - NFR-001 | Done | Vault update process should be deterministic in ordering, timestamp policy, and compression settings.
 - NFR-002 | Done | Determinism mechanisms must not weaken cryptographic safety.
 - NFR-003 | Done | Vault writes must use atomic filesystem update strategy.
