@@ -52,7 +52,7 @@
 | NFR-007 |  |  |  | SBOM release artifact |
 | NFR-008 |  |  |  | Reproducible build documentation |
 | NFR-009 |  |  |  | Cross-platform CI matrix |
-| NFR-010 |  |  |  | Golden path integration tests |
+| NFR-010 | tests/golden_path.rs | cargo test --test golden_path |  | Golden path integration tests |
 | NFR-011 |  |  |  | Corruption-path tests |
 | NFR-012 |  |  |  | Security-path tests |
 | NFR-013 |  |  |  | Determinism test coverage |
