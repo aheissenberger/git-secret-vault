@@ -71,9 +71,7 @@ pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
         let mut answer = String::new();
         std::io::stdin().read_line(&mut answer).ok();
         if answer.trim().eq_ignore_ascii_case("y") {
-            match keyring::Entry::new("git-secret-vault", &vault_uuid)
-                .and_then(|e| e.set_password(password.as_str()))
-            {
+            match crate::keyring_mock::set_password(&vault_uuid, password.as_str()) {
                 Ok(_) => eprintln!("✓ Password saved to keyring."),
                 Err(e) => eprintln!("warning: keyring save failed: {e}"),
             }

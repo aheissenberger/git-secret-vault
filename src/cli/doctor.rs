@@ -126,9 +126,14 @@ pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
     });
 
     // 6. System keyring accessible?
-    let keyring_ok = keyring::Entry::new("git-secret-vault", "doctor-probe")
-        .map(|_| true)
-        .unwrap_or(false);
+    let keyring_ok = if crate::keyring_mock::is_mock() {
+        // Mock backend is always available
+        true
+    } else {
+        keyring::Entry::new("git-secret-vault", "doctor-probe")
+            .map(|_| true)
+            .unwrap_or(false)
+    };
     checks.push(Check {
         name: "keyring_available",
         ok: keyring_ok,

@@ -3,6 +3,7 @@ mod config;
 mod crypto;
 mod error;
 mod fs;
+mod keyring_mock;
 mod vault;
 
 use anyhow::Result;

@@ -128,9 +128,7 @@ pub fn get_password_with_keyring(
         return Ok(Zeroizing::new(val));
     }
     if let Some(uuid) = vault_uuid {
-        let keyring_pw = keyring::Entry::new("git-secret-vault", uuid)
-            .ok()
-            .and_then(|e| e.get_password().ok());
+        let keyring_pw = crate::keyring_mock::get_password(uuid);
         match keyring_pw {
             Some(pw) => return Ok(Zeroizing::new(pw)),
             None if require_keyring => {

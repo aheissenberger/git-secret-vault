@@ -57,8 +57,6 @@ pub enum KeyringAction {
 
 // ── Registry ─────────────────────────────────────────────────────────────────
 
-const SERVICE: &str = "git-secret-vault";
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RegistryEntry {
     pub uuid: String,
@@ -126,8 +124,18 @@ fn read_uuid(index: &str) -> Result<String> {
     Ok(idx.uuid)
 }
 
-fn keyring_entry(uuid: &str) -> Result<keyring::Entry> {
-    keyring::Entry::new(SERVICE, uuid).map_err(|e| VaultError::Other(format!("keyring error: {e}")))
+fn keyring_get(uuid: &str) -> Option<String> {
+    crate::keyring_mock::get_password(uuid)
+}
+
+fn keyring_set(uuid: &str, secret: &str) -> Result<()> {
+    crate::keyring_mock::set_password(uuid, secret)
+        .map_err(|e| VaultError::Other(format!("keyring error: {e}")))
+}
+
+fn keyring_delete(uuid: &str) -> Result<()> {
+    crate::keyring_mock::delete_password(uuid)
+        .map_err(|e| VaultError::Other(format!("keyring error: {e}")))
 }
 
 fn cmd_save(vault: &str, index: &str, password_stdin: bool, no_keyring: bool) -> Result<()> {
@@ -138,9 +146,7 @@ fn cmd_save(vault: &str, index: &str, password_stdin: bool, no_keyring: bool) ->
     }
     let uuid = read_uuid(index)?;
     let password = crypto::get_password(password_stdin, "Vault password: ")?;
-    keyring_entry(&uuid)?
-        .set_password(&password)
-        .map_err(|e| VaultError::Other(format!("keyring error: {e}")))?;
+    keyring_set(&uuid, &password)?;
     upsert_registry(&uuid, vault)?;
     println!("Credential saved to keyring for vault {uuid}");
     Ok(())
@@ -148,23 +154,23 @@ fn cmd_save(vault: &str, index: &str, password_stdin: bool, no_keyring: bool) ->
 
 fn cmd_status(index: &str) -> Result<()> {
     let uuid = read_uuid(index)?;
-    match keyring_entry(&uuid)?.get_password() {
-        Ok(_) => {
+    match keyring_get(&uuid) {
+        Some(_) => {
             println!("Credential found in keyring for vault {uuid}");
             Ok(())
         }
-        Err(e) => {
+        None => {
             println!("No credential found in keyring for vault {uuid}");
-            Err(VaultError::Other(format!("keyring error: {e}")))
+            Err(VaultError::Other(format!(
+                "keyring error: no credential for vault {uuid}"
+            )))
         }
     }
 }
 
 fn cmd_delete(index: &str) -> Result<()> {
     let uuid = read_uuid(index)?;
-    keyring_entry(&uuid)?
-        .delete_credential()
-        .map_err(|e| VaultError::Other(format!("keyring error: {e}")))?;
+    keyring_delete(&uuid)?;
     remove_from_registry(&uuid)?;
     println!("Credential deleted from keyring for vault {uuid}");
     Ok(())
@@ -182,9 +188,9 @@ fn cmd_list() -> Result<()> {
     );
     println!("{}", "-".repeat(100));
     for entry in &entries {
-        let status = match keyring_entry(&entry.uuid)?.get_password() {
-            Ok(_) => "present",
-            Err(_) => "missing",
+        let status = match keyring_get(&entry.uuid) {
+            Some(_) => "present",
+            None => "missing",
         };
         println!(
             "{:<38} {:<30} {:<26} {}",
@@ -199,10 +205,7 @@ fn cmd_purge() -> Result<()> {
     let count = entries.len();
     for entry in &entries {
         // Ignore not-found errors during purge
-        let _ = keyring_entry(&entry.uuid).and_then(|e| {
-            e.delete_credential()
-                .map_err(|err| VaultError::Other(format!("keyring error: {err}")))
-        });
+        let _ = keyring_delete(&entry.uuid);
     }
     write_registry(&[])?;
     println!("Purged {count} credential(s) from keyring.");
@@ -273,8 +276,7 @@ mod tests {
     fn status_returns_error_when_no_credential() {
         // Use a UUID that almost certainly has no stored credential.
         let uuid = "00000000-0000-0000-0000-000000000000-nonexistent";
-        let entry = keyring_entry(uuid).expect("should construct entry");
-        let result = entry.get_password();
-        assert!(result.is_err(), "Expected no credential for fake UUID");
+        let result = crate::keyring_mock::get_password(uuid);
+        assert!(result.is_none(), "Expected no credential for fake UUID");
     }
 }

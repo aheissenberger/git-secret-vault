@@ -73,9 +73,9 @@ pub fn run(args: &PasswdArgs, quiet: bool, _verbose: bool) -> Result<()> {
 
         // If a keyring credential exists for this vault, update it with the new password.
         let uuid = outer.uuid.clone();
-        if let Ok(entry) = keyring::Entry::new("git-secret-vault", &uuid)
-            && entry.get_password().is_ok()
-            && entry.set_password(&new_password).is_ok()
+        let had_credential = crate::keyring_mock::get_password(&uuid).is_some();
+        if had_credential
+            && crate::keyring_mock::set_password(&uuid, &new_password).is_ok()
             && !quiet
         {
             println!("✓ Updated keyring credential for vault {uuid}");
