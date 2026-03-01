@@ -3,58 +3,60 @@
 Generated file. Do not edit manually.
 Source of truth: `spec/requirements/*.md`
 
-- FR-001 | Proposed | Migrate legacy requirements into merge-resistant spec-ledger records.
-- FR-002 | Proposed | Use a standards-compatible encrypted ZIP vault with built-in CLI crypto operations and explicit compatibility checks.
-- FR-003 | Proposed | Minimize metadata leakage by default and expose only a minimal non-secret outer index.
-- FR-004 | Proposed | Store an encrypted manifest in-vault and enforce deterministic, atomic vault update behavior.
+- FR-001 | Done | Migrate legacy requirements into merge-resistant spec-ledger records.
+- FR-002 | Done | Use a standards-compatible encrypted ZIP vault with built-in CLI crypto operations and explicit compatibility checks.
+- FR-003 | Done | Minimize metadata leakage by default and expose only a minimal non-secret outer index.
+- FR-004 | Done | Store an encrypted manifest in-vault and enforce deterministic, atomic vault update behavior.
 - FR-005 | Proposed | Implement safe password policy, source priority, CI-friendly input modes, and best-effort in-memory secret hygiene.
-- FR-006 | Proposed | Enforce safe filesystem handling for extraction, symlink policy, permissions restoration, and plaintext cleanup operations.
-- FR-007 | Proposed | Provide repository hardening and drift controls to prevent accidental plaintext commits and CI drift regressions.
-- FR-008 | Proposed | Implement the required GitSecretVault CLI command surface and aliases.
-- FR-009 | Proposed | `init` creates vault artifacts, establishes identity metadata, and supports secure bootstrap password/keyring flow.
-- FR-010 | Proposed | `lock` encrypts tracked content into the vault with deterministic/atomic behavior and optional plaintext cleanup.
-- FR-011 | Proposed | `unlock` safely restores selected secrets with explicit conflict policies and atomic per-file writes.
-- FR-012 | Proposed | `status` and `diff` provide safe introspection in passwordless and authenticated modes, with machine-readable output.
+- FR-006 | Done | Enforce safe filesystem handling for extraction, symlink policy, permissions restoration, and plaintext cleanup operations.
+- FR-007 | Done | Provide repository hardening and drift controls to prevent accidental plaintext commits and CI drift regressions.
+- FR-008 | In Progress | Implement the required GitSecretVault CLI command surface and aliases.
+- FR-009 | Done | `init` creates vault artifacts, establishes identity metadata, and supports secure bootstrap password/keyring flow.
+- FR-010 | Done | `lock` encrypts tracked content into the vault with deterministic/atomic behavior and optional plaintext cleanup.
+- FR-011 | Done | `unlock` safely restores selected secrets with explicit conflict policies and atomic per-file writes.
+- FR-012 | In Progress | `status` and `diff` provide safe introspection in passwordless and authenticated modes, with machine-readable output.
 - FR-013 | Proposed | Support secure lifecycle operations for entry removal, password rotation, and cross-platform keyring management.
 - FR-014 | Proposed | Deliver maintenance and diagnostics commands for integrity checks, cleanup safety, environment diagnostics, and hardening/compatibility flows.
-- FR-015 | Proposed | Provide repository configuration and local state persistence that support safe automation and privacy-preserving status behavior.
+- FR-015 | Done | Provide repository configuration and local state persistence that support safe automation and privacy-preserving status behavior.
 - FR-016 | Proposed | Define automation-facing output, logging safety, shell UX integrations, CI interfaces, and actionable error contracts.
 - FR-017 | Proposed | Establish release-quality verification matrix and supply-chain deliverables for GitSecretVault.
 - FR-018 | Proposed | Document operator guidance and preserve locked design decisions as immutable product-level constraints.
-- FR-019 | Proposed | `status` must provide privacy-preserving state checks without password and enhanced verification with password.
+- FR-019 | Done | `status` must provide privacy-preserving state checks without password and enhanced verification with password.
 - FR-020 | Proposed | `diff` must be password-gated and provide text/binary diff behavior with tool integration and JSON summary.
-- FR-021 | Proposed | `rm` must remove vault entries safely with pattern support and atomic updates.
-- FR-022 | Proposed | `passwd` must support safe re-encryption, stale credential handling, and team rotation workflows.
+- FR-021 | Done | `rm` must remove vault entries safely with pattern support and atomic updates.
+- FR-022 | Done | `passwd` must support safe re-encryption, stale credential handling, and team rotation workflows.
 - FR-023 | Proposed | `keyring` subcommands must provide cross-platform credential lifecycle management with safe scoping options.
-- FR-024 | Proposed | `verify` must validate manifest decryption, entry hashes, and corruption scenarios with JSON output support.
-- FR-025 | Proposed | `clean` must remove unlocked tracked plaintext safely and avoid untracked-file deletion.
-- FR-026 | Proposed | `doctor` must diagnose environment readiness and provide remediation guidance.
+- FR-024 | Done | `verify` must validate manifest decryption, entry hashes, and corruption scenarios with JSON output support.
+- FR-025 | Done | `clean` must remove unlocked tracked plaintext safely and avoid untracked-file deletion.
+- FR-026 | Done | `doctor` must diagnose environment readiness and provide remediation guidance.
 - FR-027 | Proposed | `compat check` must make compatibility risk visible before decryption workflows fail in user environments.
-- FR-028 | Proposed | `harden` must automate repository safety defaults and hook-based guardrails.
-- NFR-001 | Proposed | Vault update process should be deterministic in ordering, timestamp policy, and compression settings.
-- NFR-002 | Proposed | Determinism mechanisms must not weaken cryptographic safety.
-- NFR-003 | Proposed | Vault writes must use atomic filesystem update strategy.
-- NFR-004 | Proposed | CLI should provide shell completions for major shells.
+- FR-028 | Done | `harden` must automate repository safety defaults and hook-based guardrails.
+- NFR-001 | Done | Vault update process should be deterministic in ordering, timestamp policy, and compression settings.
+- NFR-002 | Done | Determinism mechanisms must not weaken cryptographic safety.
+- NFR-003 | Done | Vault writes must use atomic filesystem update strategy.
+- NFR-004 | Done | CLI should provide shell completions for major shells.
 - NFR-005 | Proposed | CLI should respect standard shell editing and paging environment variables.
-- NFR-006 | Proposed | Release process should provide signed artifacts and checksums.
-- NFR-007 | Proposed | Release process should provide a software bill of materials.
-- NFR-008 | Proposed | Reproducible build steps should be documented where feasible.
-- NFR-009 | Proposed | Quality pipeline must include cross-platform CI matrix coverage.
-- NFR-010 | Proposed | Golden-path command integration tests must cover init/lock/unlock/rm/passwd.
-- NFR-011 | Proposed | Corruption/error-path tests must cover truncated vault, bad password, and wrong index scenarios.
-- NFR-012 | Proposed | Security-focused tests must cover zip-slip prevention, symlink policy, and permission handling.
-- NFR-013 | Proposed | Determinism test coverage must validate stable archive ordering across repeated locks within allowed entropy constraints.
-- NFR-014 | Proposed | Keyring integration tests must cover save/retrieve/delete/list/purge and stale credential detection.
-- NFR-015 | Proposed | Tests must be created or updated before implementation code changes are added.
-- SEC-001 | Proposed | Default configuration must not expose secret filenames or paths without password access.
-- SEC-002 | Proposed | Enforce configurable minimum password policy with secure defaults.
-- SEC-003 | Proposed | Expose password policy inspection and update controls through configuration workflows.
-- SEC-004 | Proposed | Using environment-variable password mode must trigger explicit leakage risk warnings.
-- SEC-005 | Proposed | Implement and document best-effort in-memory secret buffer clearing.
-- SEC-006 | Proposed | Unlock operations must block path traversal and out-of-root extraction.
-- SEC-007 | Proposed | Symlink storage/restore is disabled by default.
-- SEC-008 | Proposed | `--remove` must delete plaintext after successful lock completion.
-- SEC-009 | Proposed | `--shred` must be explicitly documented and surfaced as best-effort only.
-- SEC-010 | Proposed | Default command output must avoid disclosing secret content.
-- SEC-011 | Proposed | Command output must never reveal passwords.
-- SEC-012 | Proposed | CLI logging controls must provide quiet and verbose operation modes.
+- NFR-006 | Done | Release process should provide signed artifacts and checksums.
+- NFR-007 | Done | Release process should provide a software bill of materials.
+- NFR-008 | Done | Reproducible build steps should be documented where feasible.
+- NFR-009 | Done | Quality pipeline must include cross-platform CI matrix coverage.
+- NFR-010 | Done | Golden-path command integration tests must cover init/lock/unlock/rm/passwd.
+- NFR-011 | Done | Corruption/error-path tests must cover truncated vault, bad password, and wrong index scenarios.
+- NFR-012 | Done | Security-focused tests must cover zip-slip prevention, symlink policy, and permission handling.
+- NFR-013 | Done | Determinism test coverage must validate stable archive ordering across repeated locks within allowed entropy constraints.
+- NFR-014 | Done | Keyring integration tests must cover save/retrieve/delete/list/purge and stale credential detection.
+- NFR-015 | Done | Tests must be created or updated before implementation code changes are added.
+- NFR-016 | Done | Optimize CLI automation ergonomics for AI agents and non-interactive orchestrators.
+- NFR-017 | Done | Provide an MCP server interface aligned to MCP 2025-11-25 while preserving CLI as execution core.
+- SEC-001 | Done | Default configuration must not expose secret filenames or paths without password access.
+- SEC-002 | Done | Enforce configurable minimum password policy with secure defaults.
+- SEC-003 | Done | Expose password policy inspection and update controls through configuration workflows.
+- SEC-004 | Done | Using environment-variable password mode must trigger explicit leakage risk warnings.
+- SEC-005 | Done | Implement and document best-effort in-memory secret buffer clearing.
+- SEC-006 | Done | Unlock operations must block path traversal and out-of-root extraction.
+- SEC-007 | Done | Symlink storage/restore is disabled by default.
+- SEC-008 | Done | `--remove` must delete plaintext after successful lock completion.
+- SEC-009 | Done | `--shred` must be explicitly documented and surfaced as best-effort only.
+- SEC-010 | Done | Default command output must avoid disclosing secret content.
+- SEC-011 | Done | Command output must never reveal passwords.
+- SEC-012 | Done | CLI logging controls must provide quiet and verbose operation modes.
