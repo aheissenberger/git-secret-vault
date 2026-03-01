@@ -8,7 +8,7 @@ use crate::vault::index::OuterIndex;
 #[derive(Args)]
 pub struct StatusArgs {
     /// Path to outer index file
-    #[arg(long, default_value = ".git-secret-vault.zip")]
+    #[arg(long, default_value = ".git-secret-vault.index.json")]
     pub index: String,
 
     /// Output machine-readable JSON

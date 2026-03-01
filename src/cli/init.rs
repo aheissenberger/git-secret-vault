@@ -6,12 +6,12 @@ use crate::vault::{format, index::OuterIndex, manifest::Manifest};
 
 #[derive(Args)]
 pub struct InitArgs {
-    /// Path to vault file (default: vault.szv)
-    #[arg(long, default_value = "vault.szv")]
+    /// Path to vault file (default: git-secret-vault.zip)
+    #[arg(long, default_value = "git-secret-vault.zip")]
     pub vault: String,
 
-    /// Path to outer index file (default: .git-secret-vault.zip)
-    #[arg(long, default_value = ".git-secret-vault.zip")]
+    /// Path to outer index file (default: .git-secret-vault.index.json)
+    #[arg(long, default_value = ".git-secret-vault.index.json")]
     pub index: String,
 
     /// Read password from stdin instead of interactive prompt

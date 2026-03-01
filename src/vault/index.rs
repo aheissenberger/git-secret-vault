@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn write_read_round_trip() {
         let dir = tempdir().unwrap();
-        let path = dir.path().join(".git-secret-vault.zip");
+        let path = dir.path().join(".git-secret-vault.index.json");
 
         let idx = OuterIndex::new("round-trip", 7, "marker42".to_owned());
         idx.write(&path).unwrap();

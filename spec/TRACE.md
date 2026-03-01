@@ -5,23 +5,23 @@
 
 | FR-001 |  |  |  | Legacy migration scaffold |
 | FR-002 | src/vault/format.rs |  | ADR-0002 | Vault format and compatibility |
-| FR-003 | src/vault/index.rs, src/cli/status.rs | cargo test (36 unit tests pass) |  | Metadata minimization and index — **Done** |
-| FR-004 | src/vault/manifest.rs, src/vault/format.rs, src/fs/mod.rs | cargo test |  | Encrypted manifest, determinism, atomicity — InProgress |
+| FR-003 | src/vault/index.rs, src/cli/{init,lock,status}.rs | cargo test (36 unit tests pass) |  | Metadata minimization and index (`.git-secret-vault.index.json`) — **Done** |
+| FR-004 | src/vault/manifest.rs, src/vault/format.rs, src/fs/mod.rs | cargo test |  | Encrypted manifest, determinism, atomicity — In Progress |
 | FR-005 | src/crypto/mod.rs |  |  | Password policy and input handling |
-| FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — InProgress |
+| FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — In Progress |
 | FR-007 |  |  |  | Git hardening and drift controls |
 | FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status}.rs |  |  | Required CLI command set |
-| FR-009 | src/cli/init.rs |  |  | Init workflow behavior — InProgress |
-| FR-010 | src/cli/lock.rs, src/vault/format.rs |  |  | Lock workflow behavior — InProgress |
-| FR-011 | src/cli/unlock.rs, src/fs/mod.rs |  |  | Unlock workflow and conflicts — InProgress |
-| FR-012 | src/cli/status.rs |  |  | Status and diff behavior — InProgress |
+| FR-009 | src/cli/init.rs | scripts/manual-test-sandbox.sh |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — In Progress |
+| FR-010 | src/cli/lock.rs, src/vault/format.rs |  |  | Lock workflow behavior — In Progress |
+| FR-011 | src/cli/unlock.rs, src/fs/mod.rs |  |  | Unlock workflow and conflicts — In Progress |
+| FR-012 | src/cli/status.rs |  |  | Status and diff behavior — In Progress |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 |  |  |  | Verify, clean, doctor, compat, harden |
 | FR-015 |  |  |  | Config and local state model |
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
-| FR-019 | src/cli/status.rs, src/vault/index.rs |  |  | Status behavior (split) — InProgress |
+| FR-019 | src/cli/status.rs, src/vault/index.rs |  |  | Status behavior (split) — In Progress |
 | FR-020 |  |  |  | Diff behavior (split) |
 | FR-021 |  |  |  | Remove behavior (split) |
 | FR-022 |  |  |  | Password rotation behavior (split) |

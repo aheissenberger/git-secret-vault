@@ -13,11 +13,11 @@ pub struct LockArgs {
     pub paths: Vec<String>,
 
     /// Path to vault file
-    #[arg(long, default_value = "vault.szv")]
+    #[arg(long, default_value = "git-secret-vault.zip")]
     pub vault: String,
 
     /// Path to outer index file
-    #[arg(long, default_value = ".git-secret-vault.zip")]
+    #[arg(long, default_value = ".git-secret-vault.index.json")]
     pub index: String,
 
     /// Read password from stdin instead of interactive prompt

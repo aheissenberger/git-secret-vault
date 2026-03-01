@@ -13,7 +13,7 @@ pub struct UnlockArgs {
     pub paths: Vec<String>,
 
     /// Path to vault file
-    #[arg(long, default_value = "vault.szv")]
+    #[arg(long, default_value = "git-secret-vault.zip")]
     pub vault: String,
 
     /// Read password from stdin instead of interactive prompt
