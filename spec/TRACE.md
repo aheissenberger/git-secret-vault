@@ -18,7 +18,7 @@
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 | src/cli/verify.rs, src/cli/clean.rs, src/cli/doctor.rs, src/cli/compat.rs, src/cli/harden.rs | cargo test |  | Verify, clean, doctor, compat, harden — **Done** |
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
-| FR-016 |  |  |  | Output safety, CI, UX, exit codes |
+| FR-016 | src/cli/doctor.rs, docs/exit-codes.md |  |  | Output safety, CI, UX, exit codes — **Done** (doctor --json, exit-code contract) |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 | README.md, docs/format-spec.md |  | ADR-0002 | Documentation and locked decisions — **Done** |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
