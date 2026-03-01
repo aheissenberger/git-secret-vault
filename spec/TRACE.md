@@ -20,7 +20,7 @@
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
-| FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
+| FR-018 | README.md, docs/format-spec.md |  | ADR-0002 | Documentation and locked decisions — **Done** |
 | FR-019 | src/cli/status.rs, src/vault/index.rs | cargo test (47 tests pass) |  | Status: summary mode (no password) + authenticated hash-verification mode (`--password-stdin`) — **Done** |
 | FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** (FR-020) |
 | FR-021 | src/cli/rm.rs | cargo test (80 unit tests pass) |  | Remove vault entries with optional local plaintext deletion — **Done** |
