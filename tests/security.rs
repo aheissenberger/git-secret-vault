@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use git_secret_vault::crypto;
+use keyring;
 use git_secret_vault::error::VaultError;
 use git_secret_vault::fs::safe_join;
 use git_secret_vault::vault::format::{self, read_entry, rewrite_vault, sha256_hex};
@@ -245,4 +246,15 @@ fn clean_only_removes_tracked_files() {
         untracked.exists(),
         "untracked file must NOT be removed by clean"
     );
+}
+
+// ── 11. Keyring entry construction does not panic (FR-017 / NFR-014) ──────────
+
+#[test]
+fn keyring_entry_new_does_not_panic() {
+    // Validates the keyring crate is correctly linked without requiring a real
+    // keyring daemon.  We only assert that Entry::new succeeds (Ok), not that
+    // get_password works in this environment.
+    let result = keyring::Entry::new("git-secret-vault", "test-uuid-determinism");
+    assert!(result.is_ok(), "keyring::Entry::new must succeed: {:?}", result.err());
 }
