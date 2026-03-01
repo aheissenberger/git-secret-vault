@@ -1,5 +1,8 @@
 // Filesystem safety: path validation and atomic writes (SEC-006, NFR-003).
 
+pub mod glob;
+pub use glob::expand_paths;
+
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};

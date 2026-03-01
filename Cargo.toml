@@ -25,6 +25,7 @@ uuid = { version = "1", features = ["v4"] }
 zip = { version = "2", features = ["aes-crypto"] }
 keyring = "3"
 zeroize = { version = "1", features = ["derive"] }
+glob = "0.3"
 
 # The profile that 'dist' will build with
 [profile.dist]
