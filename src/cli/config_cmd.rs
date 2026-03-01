@@ -89,6 +89,7 @@ fn cmd_show(json: bool) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn cmd_set(
     vault: &Option<String>,
     index: &Option<String>,
