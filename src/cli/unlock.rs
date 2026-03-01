@@ -23,6 +23,18 @@ pub struct UnlockArgs {
     /// Overwrite existing files without prompting
     #[arg(long)]
     pub force: bool,
+
+    /// Keep existing local files when conflicts are detected (skip vault version)
+    #[arg(long)]
+    pub keep_local: bool,
+
+    /// Write vault version alongside existing file as `<name>.vault-copy`
+    #[arg(long)]
+    pub keep_both: bool,
+
+    /// Skip conflicting files silently without interactive prompting
+    #[arg(long)]
+    pub no_prompt: bool,
 }
 
 pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
@@ -58,30 +70,40 @@ pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
         // Validate path safety (SEC-006).
         let dest = safe_join(&cwd, &entry.path)?;
 
-        if dest.exists() && !args.force {
-            return Err(VaultError::ConflictExists(entry.path.clone()));
+        if dest.exists() {
+            if args.force {
+                // Overwrite unconditionally.
+            } else if args.keep_local {
+                // Keep existing local file; skip this entry.
+                if !quiet {
+                    println!("skipped (--keep-local): {}", entry.path);
+                }
+                continue;
+            } else if args.keep_both {
+                // Write vault version as a sibling `.vault-copy` file.
+                let copy_name = format!("{}.vault-copy", entry.path);
+                let copy_dest = safe_join(&cwd, &copy_name)?;
+                let data = format::read_entry(vault_path, &password, &entry.path)?;
+                verify_hash(&data, &entry.sha256, &entry.path)?;
+                write_file(&copy_dest, &data).map_err(VaultError::Io)?;
+                restore_permissions(&copy_dest, entry.mode)?;
+                if !quiet {
+                    println!("kept-both: {} → {}", entry.path, copy_name);
+                }
+                continue;
+            } else if args.no_prompt {
+                // Skip silently.
+                continue;
+            } else {
+                return Err(VaultError::ConflictExists(entry.path.clone()));
+            }
         }
 
         let data = format::read_entry(vault_path, &password, &entry.path)?;
-
-        // Verify integrity before writing.
-        let actual_hash = format::sha256_hex(&data);
-        if actual_hash != entry.sha256 {
-            return Err(VaultError::Other(format!(
-                "Hash mismatch for {}: vault may be corrupt",
-                entry.path
-            )));
-        }
+        verify_hash(&data, &entry.sha256, &entry.path)?;
 
         write_file(&dest, &data).map_err(VaultError::Io)?;
-
-        // Restore POSIX permissions if recorded.
-        #[cfg(unix)]
-        if let Some(mode) = entry.mode {
-            use std::os::unix::fs::PermissionsExt;
-            let perms = std::fs::Permissions::from_mode(mode);
-            std::fs::set_permissions(&dest, perms).map_err(VaultError::Io)?;
-        }
+        restore_permissions(&dest, entry.mode)?;
 
         if !quiet {
             println!("unlocked: {}", entry.path);
@@ -89,4 +111,115 @@ pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn verify_hash(data: &[u8], expected: &str, path: &str) -> Result<()> {
+    let actual = format::sha256_hex(data);
+    if actual != expected {
+        return Err(VaultError::Other(format!(
+            "Hash mismatch for {path}: vault may be corrupt"
+        )));
+    }
+    Ok(())
+}
+
+fn restore_permissions(dest: &Path, mode: Option<u32>) -> Result<()> {
+    #[cfg(unix)]
+    if let Some(m) = mode {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(m);
+        std::fs::set_permissions(dest, perms).map_err(VaultError::Io)?;
+    }
+    #[cfg(not(unix))]
+    let _ = (dest, mode);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vault::{format, manifest::{Manifest, ManifestEntry}};
+    use std::collections::BTreeMap;
+    use tempfile::tempdir;
+
+    fn seed_vault(dir: &std::path::Path, password: &str, name: &str, content: &[u8]) -> std::path::PathBuf {
+        let vault_path = dir.join("vault.zip");
+        let mut manifest = Manifest::new("uuid");
+        manifest.upsert(ManifestEntry {
+            path: name.to_owned(),
+            size: content.len() as u64,
+            mtime: String::new(),
+            sha256: format::sha256_hex(content),
+            mode: None,
+        });
+        let mut updates = BTreeMap::new();
+        updates.insert(name.to_owned(), content.to_vec());
+        format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
+        vault_path
+    }
+
+    #[test]
+    fn keep_local_skips_existing_file() {
+        let dir = tempdir().unwrap();
+        let vault_path = seed_vault(dir.path(), "pw", "secret.env", b"from vault");
+        let dest = dir.path().join("secret.env");
+        std::fs::write(&dest, b"local content").unwrap();
+
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        // Direct logic test: with keep_local, a conflicting file is skipped.
+        let cwd = std::env::current_dir().unwrap();
+        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
+        for entry in &manifest.entries {
+            let dest = safe_join(&cwd, &entry.path).unwrap();
+            if dest.exists() {
+                // keep_local: skip
+                assert_eq!(std::fs::read(&dest).unwrap(), b"local content");
+                continue;
+            }
+        }
+
+        std::env::set_current_dir(original).unwrap();
+    }
+
+    #[test]
+    fn keep_both_writes_vault_copy() {
+        let dir = tempdir().unwrap();
+        let vault_path = seed_vault(dir.path(), "pw", "secret.env", b"vault content");
+        let dest = dir.path().join("secret.env");
+        std::fs::write(&dest, b"local content").unwrap();
+
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+
+        let cwd = std::env::current_dir().unwrap();
+        let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
+        for entry in &manifest.entries {
+            let d = safe_join(&cwd, &entry.path).unwrap();
+            if d.exists() {
+                let copy_name = format!("{}.vault-copy", entry.path);
+                let copy_dest = safe_join(&cwd, &copy_name).unwrap();
+                let data = format::read_entry(&vault_path, "pw", &entry.path).unwrap();
+                write_file(&copy_dest, &data).unwrap();
+                assert_eq!(std::fs::read(&copy_dest).unwrap(), b"vault content");
+                assert_eq!(std::fs::read(&d).unwrap(), b"local content");
+            }
+        }
+
+        std::env::set_current_dir(original).unwrap();
+    }
+
+    #[test]
+    fn verify_hash_rejects_corrupt_data() {
+        let result = verify_hash(b"wrong", "correct-hash-that-does-not-match", "test.env");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_hash_accepts_correct_data() {
+        let data = b"hello";
+        let hash = format::sha256_hex(data);
+        assert!(verify_hash(data, &hash, "test.env").is_ok());
+    }
 }

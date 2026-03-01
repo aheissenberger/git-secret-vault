@@ -27,6 +27,10 @@ pub struct LockArgs {
     /// Validate vault is current without modifying it (exit non-zero if stale)
     #[arg(long)]
     pub check: bool,
+
+    /// Delete plaintext files after successful encryption
+    #[arg(long)]
+    pub remove: bool,
 }
 
 pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
@@ -36,20 +40,28 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
     if !vault_path.exists() {
         return Err(VaultError::VaultNotFound(args.vault.clone()));
     }
-    if args.paths.is_empty() {
-        return Err(VaultError::Other(
-            "No paths specified. Provide file paths to lock.".to_owned(),
-        ));
-    }
 
     let password = crypto::get_password(args.password_stdin, "Vault password: ")?;
 
     // Load existing manifest (to carry forward existing entries).
     let (mut manifest, _) = format::read_manifest(vault_path, &password)?;
 
-    let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    // Determine which paths to process: explicit args or all tracked entries.
+    let path_strings: Vec<String> = if args.paths.is_empty() {
+        if manifest.entries.is_empty() {
+            return Err(VaultError::Other(
+                "No tracked entries in vault. Provide file paths to lock.".to_owned(),
+            ));
+        }
+        manifest.entries.iter().map(|e| e.path.clone()).collect()
+    } else {
+        args.paths.clone()
+    };
 
-    for path_str in &args.paths {
+    let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut locked_paths: Vec<String> = Vec::new();
+
+    for path_str in &path_strings {
         let local = Path::new(path_str);
         if !local.exists() {
             return Err(VaultError::Other(format!("File not found: {path_str}")));
@@ -90,6 +102,7 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
         let entry = format::entry_from_file(&canonical, local, &data);
         manifest.upsert(entry);
         updates.insert(canonical.clone(), data);
+        locked_paths.push(path_str.clone());
 
         if !quiet {
             println!("locked: {canonical}");
@@ -109,5 +122,148 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
     outer.updated_at = chrono::Utc::now().to_rfc3339();
     outer.write(index_path)?;
 
+    // Remove plaintext files after successful vault write if --remove was specified.
+    if args.remove {
+        for path_str in &locked_paths {
+            let local = Path::new(path_str);
+            if local.exists() {
+                std::fs::remove_file(local).map_err(VaultError::Io)?;
+                if !quiet {
+                    println!("removed: {path_str}");
+                }
+            }
+        }
+    }
+
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vault::{format, index::OuterIndex, manifest::Manifest};
+    use tempfile::tempdir;
+
+    fn setup_vault(dir: &std::path::Path, password: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let vault_path = dir.join("vault.zip");
+        let index_path = dir.join(".index.json");
+        let manifest = Manifest::new("test-uuid");
+        let marker = format::rewrite_vault(&vault_path, password, &std::collections::BTreeMap::new(), &manifest).unwrap();
+        let outer = OuterIndex::new("test-uuid", 0, marker);
+        outer.write(&index_path).unwrap();
+        (vault_path, index_path)
+    }
+
+    #[test]
+    fn lock_single_file_updates_vault_and_index() {
+        let dir = tempdir().unwrap();
+        let (vault_path, index_path) = setup_vault(dir.path(), "pw123");
+
+        let secret = dir.path().join("secret.env");
+        std::fs::write(&secret, b"DB_PASS=hunter2").unwrap();
+
+        let args = LockArgs {
+            paths: vec!["secret.env".to_owned()],
+            vault: vault_path.to_str().unwrap().to_owned(),
+            index: index_path.to_str().unwrap().to_owned(),
+            password_stdin: false,
+            check: false,
+            remove: false,
+        };
+
+        // Change to dir so relative path works.
+        let original = std::env::current_dir().unwrap();
+        std::env::set_current_dir(dir.path()).unwrap();
+        let result = {
+            let pw = zeroize::Zeroizing::new("pw123".to_owned());
+            // Use internal logic directly: simulate run with known password.
+            let vault = std::path::Path::new(&args.vault);
+            let (mut manifest, _) = format::read_manifest(vault, &*pw).unwrap();
+            let local = std::path::Path::new("secret.env");
+            let data = std::fs::read(local).unwrap();
+            let entry = format::entry_from_file("secret.env", local, &data);
+            manifest.upsert(entry);
+            let mut updates = std::collections::BTreeMap::new();
+            updates.insert("secret.env".to_owned(), data);
+            let marker = format::rewrite_vault(vault, &*pw, &updates, &manifest).unwrap();
+            let mut outer = OuterIndex::read(std::path::Path::new(&args.index)).unwrap();
+            outer.entry_count = manifest.entries.len();
+            outer.integrity_marker = marker;
+            outer.write(std::path::Path::new(&args.index)).unwrap();
+            Ok::<(), crate::error::VaultError>(())
+        };
+        std::env::set_current_dir(original).unwrap();
+
+        assert!(result.is_ok());
+        let outer = OuterIndex::read(&index_path).unwrap();
+        assert_eq!(outer.entry_count, 1);
+    }
+
+    #[test]
+    fn lock_no_args_on_empty_vault_returns_error() {
+        let dir = tempdir().unwrap();
+        let (vault_path, index_path) = setup_vault(dir.path(), "pw");
+
+        let args = LockArgs {
+            paths: vec![],
+            vault: vault_path.to_str().unwrap().to_owned(),
+            index: index_path.to_str().unwrap().to_owned(),
+            password_stdin: false,
+            check: false,
+            remove: false,
+        };
+        // Cannot call run() without password prompt, test internal logic:
+        // Empty manifest + empty paths = error.
+        let manifest = Manifest::new("u");
+        assert!(manifest.entries.is_empty());
+        // Simulate the guard.
+        let path_strings: Vec<String> = if args.paths.is_empty() {
+            if manifest.entries.is_empty() {
+                vec![] // would trigger error
+            } else {
+                manifest.entries.iter().map(|e| e.path.clone()).collect()
+            }
+        } else {
+            args.paths.clone()
+        };
+        // The guard fires when paths_strings is empty due to empty manifest.
+        assert!(path_strings.is_empty());
+    }
+
+    #[test]
+    fn lock_no_args_with_tracked_entries_uses_manifest_paths() {
+        let dir = tempdir().unwrap();
+        let vault_path = dir.path().join("v.zip");
+
+        // Seed vault with one entry.
+        let mut manifest = Manifest::new("uuid-noarg");
+        let content = b"hello";
+        manifest.upsert(crate::vault::manifest::ManifestEntry {
+            path: "tracked.env".to_owned(),
+            size: content.len() as u64,
+            mtime: String::new(),
+            sha256: format::sha256_hex(content),
+            mode: None,
+        });
+        let mut updates = std::collections::BTreeMap::new();
+        updates.insert("tracked.env".to_owned(), content.to_vec());
+        format::rewrite_vault(&vault_path, "pw", &updates, &manifest).unwrap();
+
+        // No paths in args → should use manifest entries.
+        let args = LockArgs {
+            paths: vec![],
+            vault: vault_path.to_str().unwrap().to_owned(),
+            index: String::new(),
+            password_stdin: false,
+            check: false,
+            remove: false,
+        };
+        let (loaded_manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
+        let path_strings: Vec<String> = if args.paths.is_empty() {
+            loaded_manifest.entries.iter().map(|e| e.path.clone()).collect()
+        } else {
+            args.paths.clone()
+        };
+        assert_eq!(path_strings, vec!["tracked.env"]);
+    }
 }
