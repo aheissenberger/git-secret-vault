@@ -1,291 +1,174 @@
 // Integration tests for corruption and error paths (NFR-011).
 //
-// These tests exercise the internal vault/index APIs directly to verify
-// that all error and corruption scenarios return appropriate errors rather
-// than silently succeeding or panicking.
-
-use std::collections::BTreeMap;
+// These tests exercise the Vault API directly to verify that all error and
+// corruption scenarios return appropriate errors rather than silently
+// succeeding or panicking.
 
 use git_secret_vault::error::VaultError;
-use git_secret_vault::vault::format::{read_entry, read_manifest, rewrite_vault, sha256_hex};
-use git_secret_vault::vault::index::OuterIndex;
-use git_secret_vault::vault::manifest::{Manifest, ManifestEntry};
+use git_secret_vault::vault::Vault;
 use tempfile::tempdir;
 
 const PASSWORD: &str = "correct-horse-battery-staple";
-const WRONG_PASSWORD: &str = "wrong-password-xyz";
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-fn blank_manifest(uuid: &str) -> Manifest {
-    Manifest::new(uuid)
+fn init_vault_with_entry(dir: &std::path::Path, label: &str, data: &[u8]) -> Vault {
+    let vault = Vault::init(dir, PASSWORD).unwrap();
+    let key = vault.derive_key(PASSWORD).unwrap();
+    vault.lock(&key, label, data).unwrap();
+    vault
 }
 
-fn make_entry(path: &str, data: &[u8]) -> ManifestEntry {
-    ManifestEntry {
-        path: path.to_owned(),
-        size: data.len() as u64,
-        mtime: String::new(),
-        sha256: sha256_hex(data),
-        mode: None,
-    }
-}
-
-/// Create a vault with no entries at `vault_path`.
-fn create_empty_vault(vault_path: &std::path::Path) {
-    let manifest = blank_manifest("test-uuid");
-    rewrite_vault(vault_path, PASSWORD, &BTreeMap::new(), &manifest).unwrap();
-}
-
-/// Create a vault with one entry and return the locked data.
-fn create_vault_with_entry(vault_path: &std::path::Path, entry_name: &str, data: &[u8]) {
-    let mut manifest = blank_manifest("test-uuid-entry");
-    manifest.upsert(make_entry(entry_name, data));
-    let mut updates = BTreeMap::new();
-    updates.insert(entry_name.to_owned(), data.to_vec());
-    rewrite_vault(vault_path, PASSWORD, &updates, &manifest).unwrap();
-}
-
-// ── test 1: wrong password on read_manifest ───────────────────────────────
+// ── test 1: wrong key on unlock returns error ─────────────────────────────────
 
 #[test]
 fn wrong_password_on_read_manifest_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    create_empty_vault(&vault);
-
-    let result = read_manifest(&vault, WRONG_PASSWORD);
-    assert!(
-        result.is_err(),
-        "expected error when reading manifest with wrong password"
-    );
+    let vault = init_vault_with_entry(dir.path(), "secret.env", b"data");
+    // Derive a key with the wrong password
+    let wrong_vault = Vault::open(dir.path()).unwrap();
+    // The wrong key will fail to decrypt the blob
+    let wrong_key = wrong_vault.derive_key("wrong-password-xyz").unwrap();
+    let result = vault.unlock(&wrong_key, "secret.env");
+    assert!(result.is_err(), "expected error when decrypting with wrong key");
 }
 
-// ── test 2: truncated vault file ──────────────────────────────────────────
+// ── test 2: corrupted blob returns error ──────────────────────────────────────
 
 #[test]
 fn truncated_vault_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    create_empty_vault(&vault);
+    let vault = init_vault_with_entry(dir.path(), "secret.env", b"data");
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    // Truncate to 10 bytes – not a valid ZIP.
-    std::fs::write(&vault, b"truncated!").unwrap();
+    // Corrupt all blob files
+    let blobs_dir = dir.path().join("blobs");
+    for entry in std::fs::read_dir(&blobs_dir).unwrap() {
+        let path = entry.unwrap().path();
+        std::fs::write(&path, b"truncated!").unwrap();
+    }
 
-    let result = read_manifest(&vault, PASSWORD);
-    assert!(
-        result.is_err(),
-        "expected error when reading truncated vault"
-    );
+    let result = vault.unlock(&key, "secret.env");
+    assert!(result.is_err(), "expected error when blob is corrupted");
 }
 
-// ── test 3: missing vault file ────────────────────────────────────────────
+// ── test 3: missing vault directory returns error ─────────────────────────────
 
 #[test]
 fn missing_vault_file_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("nonexistent.zip");
-
-    let result = read_manifest(&vault, PASSWORD);
-    assert!(
-        result.is_err(),
-        "expected error when vault file does not exist"
-    );
-    // Should be an IO error (file not found).
-    assert!(matches!(result.unwrap_err(), VaultError::Io(_)));
+    let nonexistent = dir.path().join("nonexistent-vault");
+    let result = Vault::open(&nonexistent);
+    assert!(result.is_err(), "expected error when vault directory does not exist");
+    assert!(matches!(result.err().unwrap(), VaultError::Io(_)));
 }
 
-// ── test 4: corrupted zip returns error ───────────────────────────────────
+// ── test 4: corrupted blob with random bytes returns error ────────────────────
 
 #[test]
 fn corrupted_zip_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
+    let vault = init_vault_with_entry(dir.path(), "secret.env", b"data");
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    // Write random bytes that are not a valid ZIP archive.
-    let garbage: Vec<u8> = (0u8..=255).cycle().take(512).collect();
-    std::fs::write(&vault, &garbage).unwrap();
+    // Overwrite all blobs with garbage
+    let blobs_dir = dir.path().join("blobs");
+    for entry in std::fs::read_dir(&blobs_dir).unwrap() {
+        let path = entry.unwrap().path();
+        let garbage: Vec<u8> = (0u8..=255).cycle().take(512).collect();
+        std::fs::write(&path, &garbage).unwrap();
+    }
 
-    let result = read_manifest(&vault, PASSWORD);
-    assert!(
-        result.is_err(),
-        "expected error when vault contains random bytes"
-    );
+    let result = vault.unlock(&key, "secret.env");
+    assert!(result.is_err(), "expected error when blob contains random bytes");
 }
 
-// ── test 5: wrong password on read_entry ─────────────────────────────────
+// ── test 5: wrong key on entry read returns error ─────────────────────────────
 
 #[test]
 fn wrong_password_on_read_entry_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    let entry_name = "secrets.env";
-    let data = b"DB_PASSWORD=hunter2";
-    create_vault_with_entry(&vault, entry_name, data);
-
-    let result = read_entry(&vault, WRONG_PASSWORD, entry_name);
-    assert!(
-        result.is_err(),
-        "expected error when reading entry with wrong password"
-    );
+    let vault = init_vault_with_entry(dir.path(), "secrets.env", b"DB_PASSWORD=hunter2");
+    let wrong_key = vault.derive_key("wrong-password-xyz").unwrap();
+    let result = vault.unlock(&wrong_key, "secrets.env");
+    assert!(result.is_err(), "expected error when reading entry with wrong key");
 }
 
-// ── test 6: missing index file ────────────────────────────────────────────
+// ── test 6: missing vault.meta.json returns Io error ─────────────────────────
 
 #[test]
 fn missing_index_file_returns_error() {
     let dir = tempdir().unwrap();
-    let index_path = dir.path().join(".git-secret-vault.index.json");
-
-    let result = OuterIndex::read(&index_path);
-    assert!(
-        result.is_err(),
-        "expected error when index file does not exist"
-    );
-    assert!(matches!(result.unwrap_err(), VaultError::Io(_)));
+    // vault.meta.json doesn't exist → open fails
+    let result = Vault::open(dir.path());
+    assert!(result.is_err(), "expected error when vault.meta.json does not exist");
+    assert!(matches!(result.err().unwrap(), VaultError::Io(_)));
 }
 
-// ── test 7: corrupted index JSON ─────────────────────────────────────────
+// ── test 7: corrupted snapshot.json returns error ────────────────────────────
 
 #[test]
 fn corrupted_index_json_returns_error() {
     let dir = tempdir().unwrap();
-    let index_path = dir.path().join(".git-secret-vault.index.json");
-
-    // Write invalid JSON.
-    std::fs::write(&index_path, b"{ this is: not valid json !!!").unwrap();
-
-    let result = OuterIndex::read(&index_path);
-    assert!(
-        result.is_err(),
-        "expected error when index JSON is corrupted"
-    );
-    assert!(matches!(result.unwrap_err(), VaultError::Json(_)));
+    Vault::init(dir.path(), PASSWORD).unwrap();
+    let snapshot_path = dir.path().join("index").join("snapshot.json");
+    std::fs::write(&snapshot_path, b"{ this is: not valid json !!!").unwrap();
+    let vault = Vault::open(dir.path()).unwrap();
+    let result = vault.snapshot();
+    assert!(result.is_err(), "expected error when snapshot JSON is corrupted");
 }
 
-// ── test 8: rm with unknown path returns error ────────────────────────────
+// ── test 8: rm with unknown label returns error ───────────────────────────────
 
 #[test]
 fn rm_unknown_path_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    create_empty_vault(&vault);
-
-    // Read the (empty) manifest, then attempt to remove a path that doesn't exist.
-    let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-
-    let target_path = "nonexistent/secret.env";
-    let exists_in_manifest = manifest.entries.iter().any(|e| e.path == target_path);
-
-    // The rm logic returns an error when no matching entries are found.
-    // Simulate: collect paths to remove, then assert none matched.
-    let to_remove: Vec<String> = vec![target_path.to_owned()]
-        .into_iter()
-        .filter(|p| manifest.entries.iter().any(|e| &e.path == p))
-        .collect();
-
-    assert!(
-        !exists_in_manifest,
-        "path should not exist in empty manifest"
-    );
-    assert!(
-        to_remove.is_empty(),
-        "rm should find no matching entries → would return error"
-    );
+    let vault = Vault::init(dir.path(), PASSWORD).unwrap();
+    let key = vault.derive_key(PASSWORD).unwrap();
+    let result = vault.remove(&key, "nonexistent/secret.env");
+    assert!(result.is_err(), "expected error when removing non-existent entry");
 }
 
-// ── test 9: lock --check on stale file detects drift ─────────────────────
+// ── test 9: stale file detected via content_hash comparison ──────────────────
 
 #[test]
 fn lock_check_stale_file_returns_error() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    let entry_name = "tracked.env";
-    let original_data = b"SECRET=original";
-
-    // Lock the file into the vault.
-    create_vault_with_entry(&vault, entry_name, original_data);
-
-    // Simulate drift: read the manifest and check whether the hash matches
-    // modified content (as the lock --check code does).
-    let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let stored_entry = manifest
-        .entries
-        .iter()
-        .find(|e| e.path == entry_name)
-        .unwrap();
+    let vault = init_vault_with_entry(dir.path(), "tracked.env", b"SECRET=original");
+    let snap = vault.snapshot().unwrap();
+    let entry = snap.entries.iter().find(|e| e.label == "tracked.env").unwrap();
+    let stored_hash = entry.content_hash.clone();
 
     let modified_data = b"SECRET=tampered";
-    let current_hash = sha256_hex(modified_data);
-
-    // Hash of modified content must differ from what's stored → drift detected.
-    assert_ne!(
-        current_hash, stored_entry.sha256,
-        "drift should be detected: hashes must differ after modification"
-    );
+    let current_hash = git_secret_vault::crypto::content_hash(modified_data);
+    assert_ne!(current_hash, stored_hash, "drift should be detected");
 }
 
-// ── test 10: verify returns ok on clean vault (smoke test) ────────────────
+// ── test 10: verify returns ok on clean vault ─────────────────────────────────
 
 #[test]
 fn verify_clean_vault_passes() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    let entry_name = "clean.env";
-    let data = b"CLEAN=true";
-    create_vault_with_entry(&vault, entry_name, data);
-
-    let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let entry = manifest
-        .entries
-        .iter()
-        .find(|e| e.path == entry_name)
-        .unwrap();
-
-    // Read back the entry and verify its hash.
-    let actual_data = read_entry(&vault, PASSWORD, entry_name).unwrap();
-    let actual_hash = sha256_hex(&actual_data);
-
-    assert_eq!(
-        actual_hash, entry.sha256,
-        "verify should pass: hash matches stored hash"
-    );
+    let vault = init_vault_with_entry(dir.path(), "clean.env", b"CLEAN=true");
+    let key = vault.derive_key(PASSWORD).unwrap();
+    assert!(vault.verify(&key).is_ok(), "verify should pass on clean vault");
 }
 
-// ── test 11: verify detects hash mismatch in manifest ────────────────────
+// ── test 11: verify detects corrupted blob ────────────────────────────────────
 
 #[test]
 fn verify_detects_hash_mismatch() {
     let dir = tempdir().unwrap();
-    let vault = dir.path().join("vault.zip");
-    let entry_name = "tampered.env";
-    let data = b"REAL=value";
+    let vault = init_vault_with_entry(dir.path(), "tampered.env", b"REAL=value");
+    let key = vault.derive_key(PASSWORD).unwrap();
 
-    // Lock the entry with a deliberately wrong sha256 in the manifest.
-    let mut manifest = blank_manifest("uuid-tamper");
-    manifest.upsert(ManifestEntry {
-        path: entry_name.to_owned(),
-        size: data.len() as u64,
-        mtime: String::new(),
-        sha256: "0000000000000000000000000000000000000000000000000000000000000000".to_owned(),
-        mode: None,
-    });
-    let mut updates = BTreeMap::new();
-    updates.insert(entry_name.to_owned(), data.to_vec());
-    rewrite_vault(&vault, PASSWORD, &updates, &manifest).unwrap();
+    // Corrupt all blobs so decryption fails
+    let blobs_dir = dir.path().join("blobs");
+    for entry in std::fs::read_dir(&blobs_dir).unwrap() {
+        let path = entry.unwrap().path();
+        std::fs::write(&path, b"garbage-bytes-not-valid-ciphertext").unwrap();
+    }
 
-    // Now simulate verify: read manifest and compare hashes.
-    let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let entry = manifest
-        .entries
-        .iter()
-        .find(|e| e.path == entry_name)
-        .unwrap();
-    let actual_data = read_entry(&vault, PASSWORD, entry_name).unwrap();
-    let actual_hash = sha256_hex(&actual_data);
-
-    assert_ne!(
-        actual_hash, entry.sha256,
-        "verify should detect hash mismatch"
-    );
+    let result = vault.verify(&key);
+    assert!(result.is_err(), "verify should detect corrupted blobs");
 }

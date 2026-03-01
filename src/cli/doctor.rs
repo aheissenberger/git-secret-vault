@@ -182,41 +182,39 @@ pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::vault::{format, index::OuterIndex, manifest::Manifest};
-    use std::collections::BTreeMap;
+    use crate::vault::Vault;
     use tempfile::tempdir;
 
     #[test]
     fn doctor_detects_vault_exists() {
         let dir = tempdir().unwrap();
-        let vault_path = dir.path().join("vault.zip");
-        let manifest = Manifest::new("uuid");
-        format::rewrite_vault(&vault_path, "pw", &BTreeMap::new(), &manifest).unwrap();
-        assert!(vault_path.exists());
+        Vault::init(dir.path(), "pw").unwrap();
+        assert!(dir.path().join("vault.meta.json").exists());
     }
 
     #[test]
     fn doctor_detects_vault_missing() {
         let dir = tempdir().unwrap();
-        let vault_path = dir.path().join("no-vault.zip");
-        assert!(!vault_path.exists());
+        assert!(!dir.path().join("vault.meta.json").exists());
     }
 
     #[test]
     fn doctor_detects_valid_index() {
         let dir = tempdir().unwrap();
-        let index_path = dir.path().join(".index.json");
-        let idx = OuterIndex::new("uuid", 0, "marker".to_owned());
-        idx.write(&index_path).unwrap();
-        assert!(OuterIndex::read(&index_path).is_ok());
+        let vault = Vault::init(dir.path(), "pw").unwrap();
+        let key = vault.derive_key("pw").unwrap();
+        vault.lock(&key, "s.env", b"data").unwrap();
+        assert!(vault.snapshot().is_ok());
     }
 
     #[test]
     fn doctor_detects_invalid_index_json() {
         let dir = tempdir().unwrap();
-        let index_path = dir.path().join(".index.json");
-        std::fs::write(&index_path, b"not valid json").unwrap();
-        assert!(OuterIndex::read(&index_path).is_err());
+        Vault::init(dir.path(), "pw").unwrap();
+        let snapshot_path = dir.path().join("index").join("snapshot.json");
+        std::fs::write(&snapshot_path, b"not valid json").unwrap();
+        let vault = Vault::open(dir.path()).unwrap();
+        assert!(vault.snapshot().is_err());
     }
 
     #[test]
