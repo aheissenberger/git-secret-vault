@@ -23,6 +23,7 @@ fn main() -> Result<()> {
         Commands::Harden(args) => cli::harden::run(args, cli.quiet),
         Commands::Passwd(args) => cli::passwd::run(args, cli.quiet),
         Commands::Diff(args) => cli::diff::run(args, cli.quiet),
+        Commands::Completions(args) => cli::completions::run(args),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");
