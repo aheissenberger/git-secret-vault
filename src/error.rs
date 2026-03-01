@@ -29,6 +29,9 @@ pub enum VaultError {
     #[error("Conflict: {0} already exists (use --force to overwrite)")]
     ConflictExists(String),
 
+    #[error("not implemented")]
+    NotImplemented,
+
     #[error("{0}")]
     Other(String),
 }
