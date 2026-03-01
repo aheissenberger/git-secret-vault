@@ -53,3 +53,11 @@
 - Follow existing architecture and conventions
 - Avoid unnecessary dependencies or structural changes
 - Preserve backwards compatibility unless explicitly required
+
+## Metadata format guardrails
+
+- Requirement frontmatter `status` must be exactly one of: `Proposed`, `In Progress`, `Done`.
+- Never use compact variants such as `InProgress`.
+- Trace event frontmatter `timestamp` must be valid UTC RFC3339, e.g. `2026-03-01T15:15:00Z`.
+- Use hyphens in the date portion (`YYYY-MM-DD`), never colons (`YYYY:MM:DD`).
+- Before handoff, run `scripts/spec-ledger/validate-req-files.ts` and `scripts/spec-ledger/validate-trace-events.ts`.

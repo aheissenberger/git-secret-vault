@@ -10,8 +10,8 @@ pub struct InitArgs {
     #[arg(long, default_value = "vault.szv")]
     pub vault: String,
 
-    /// Path to outer index file (default: .safezipvault.index)
-    #[arg(long, default_value = ".safezipvault.index")]
+    /// Path to outer index file (default: .git-secret-vault.zip)
+    #[arg(long, default_value = ".git-secret-vault.zip")]
     pub index: String,
 
     /// Read password from stdin instead of interactive prompt

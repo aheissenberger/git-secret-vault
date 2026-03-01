@@ -17,7 +17,7 @@ pub struct LockArgs {
     pub vault: String,
 
     /// Path to outer index file
-    #[arg(long, default_value = ".safezipvault.index")]
+    #[arg(long, default_value = ".git-secret-vault.zip")]
     pub index: String,
 
     /// Read password from stdin instead of interactive prompt
