@@ -1,6 +1,7 @@
 pub mod clean;
 pub mod compat;
 pub mod completions;
+pub mod config_cmd;
 pub mod diff;
 pub mod doctor;
 pub mod harden;
@@ -64,4 +65,6 @@ pub enum Commands {
     Completions(completions::CompletionsArgs),
     /// Manage password policy settings
     Policy(policy::PolicyArgs),
+    /// Read and write repository config file
+    Config(config_cmd::ConfigArgs),
 }

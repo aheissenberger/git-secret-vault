@@ -1,4 +1,5 @@
 mod cli;
+mod config;
 mod crypto;
 mod error;
 mod fs;
@@ -25,6 +26,7 @@ fn main() -> Result<()> {
         Commands::Policy(args) => cli::policy::run(args, cli.quiet),
         Commands::Diff(args) => cli::diff::run(args, cli.quiet),
         Commands::Completions(args) => cli::completions::run(args),
+        Commands::Config(args) => cli::config_cmd::run(args, cli.quiet),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

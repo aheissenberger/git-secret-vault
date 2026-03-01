@@ -17,7 +17,7 @@
 | FR-012 | src/cli/status.rs |  |  | Status and diff behavior — In Progress |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 |  |  |  | Verify, clean, doctor, compat, harden |
-| FR-015 |  |  |  | Config and local state model |
+| FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
