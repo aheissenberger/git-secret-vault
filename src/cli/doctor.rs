@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use clap::Args;
+use serde_json::json;
 
 use crate::error::Result;
 use crate::vault::index::OuterIndex;
@@ -16,9 +17,14 @@ pub struct DoctorArgs {
     /// Path to outer index file to check
     #[arg(long, default_value = ".git-secret-vault.index.json")]
     pub index: String,
+
+    /// Output machine-readable JSON
+    #[arg(long)]
+    pub json: bool,
 }
 
 struct Check {
+    name: &'static str,
     ok: bool,
     description: String,
     hint: Option<String>,
@@ -33,6 +39,7 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
     // 1. Vault file exists?
     let vault_exists = vault_path.exists();
     checks.push(Check {
+        name: "vault_file_exists",
         ok: vault_exists,
         description: format!("Vault file exists: {}", args.vault),
         hint: if vault_exists {
@@ -48,6 +55,7 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
     // 2. Index file exists?
     let index_exists = index_path.exists();
     checks.push(Check {
+        name: "index_file_exists",
         ok: index_exists,
         description: format!("Index file exists: {}", args.index),
         hint: if index_exists {
@@ -67,6 +75,7 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         false
     };
     checks.push(Check {
+        name: "index_readable",
         ok: index_valid,
         description: "Index file is valid JSON".to_owned(),
         hint: if index_valid {
@@ -86,6 +95,7 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         ok
     };
     checks.push(Check {
+        name: "directory_writable",
         ok: can_write,
         description: "Can write to current directory".to_owned(),
         hint: if can_write {
@@ -102,6 +112,7 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         .map(|o| o.status.success() || !o.stdout.is_empty() || !o.stderr.is_empty())
         .unwrap_or(false);
     checks.push(Check {
+        name: "unzip_available",
         ok: unzip_available,
         description: "`unzip` binary is available on PATH".to_owned(),
         hint: if unzip_available {
@@ -111,15 +122,32 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         },
     });
 
-    let mut any_failed = false;
-    for check in &checks {
-        if check.ok {
-            if !quiet {
-                println!("  [OK]   {}", check.description);
-            }
-        } else {
-            any_failed = true;
-            if !quiet {
+    let any_failed = checks.iter().any(|c| !c.ok);
+
+    if args.json {
+        let check_items: Vec<serde_json::Value> = checks
+            .iter()
+            .map(|c| {
+                let message = if c.ok {
+                    c.description.clone()
+                } else {
+                    c.hint
+                        .as_deref()
+                        .map(|h| format!("{} — {}", c.description, h))
+                        .unwrap_or_else(|| c.description.clone())
+                };
+                json!({ "name": c.name, "ok": c.ok, "message": message })
+            })
+            .collect();
+        let out = json!({ "ok": !any_failed, "checks": check_items });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap());
+    } else {
+        for check in &checks {
+            if check.ok {
+                if !quiet {
+                    println!("  [OK]   {}", check.description);
+                }
+            } else if !quiet {
                 if let Some(hint) = &check.hint {
                     println!("  [FAIL] {} - {}", check.description, hint);
                 } else {
