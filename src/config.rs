@@ -95,9 +95,7 @@ mod tests {
     fn round_trip_save_and_load() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        let mut cfg = Config::default();
-        cfg.password_min_length = 12;
-        cfg.status_privacy_mode = true;
+        let cfg = Config { password_min_length: 12, status_privacy_mode: true, ..Default::default() };
         cfg.save(&path).unwrap();
         let loaded = Config::load(&path).unwrap();
         assert_eq!(loaded.password_min_length, 12);

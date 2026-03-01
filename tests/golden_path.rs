@@ -165,25 +165,25 @@ fn lock_passwd_unlock_with_new_password() {
     let old_pw = zeroize::Zeroizing::new("oldpass123".to_owned());
     let new_pw = zeroize::Zeroizing::new("newpass456".to_owned());
 
-    let (manifest, _) = format::read_manifest(&vault_path, &*old_pw).unwrap();
+    let (manifest, _) = format::read_manifest(&vault_path, &old_pw).unwrap();
     let mut updates: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     for entry in &manifest.entries {
-        let data = format::read_entry(&vault_path, &*old_pw, &entry.path).unwrap();
+        let data = format::read_entry(&vault_path, &old_pw, &entry.path).unwrap();
         updates.insert(entry.path.clone(), data);
     }
-    let marker = format::rewrite_vault(&vault_path, &*new_pw, &updates, &manifest).unwrap();
+    let marker = format::rewrite_vault(&vault_path, &new_pw, &updates, &manifest).unwrap();
     let mut outer = OuterIndex::read(&index_path).unwrap();
     outer.integrity_marker = marker;
     outer.write(&index_path).unwrap();
 
     // Old password must fail.
     assert!(
-        format::read_manifest(&vault_path, &*old_pw).is_err(),
+        format::read_manifest(&vault_path, &old_pw).is_err(),
         "old password must no longer work after rotation"
     );
 
     // New password must succeed and data must be intact.
-    let recovered = format::read_entry(&vault_path, &*new_pw, "secret.env").unwrap();
+    let recovered = format::read_entry(&vault_path, &new_pw, "secret.env").unwrap();
     assert_eq!(recovered, b"top-secret-data");
 }
 
