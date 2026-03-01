@@ -44,7 +44,7 @@
 | SEC-011 | src/crypto/mod.rs |  |  | Password output redaction — **Done** |
 | SEC-012 | src/cli/mod.rs |  |  | Logging verbosity controls — **Done** |
 | NFR-001 | src/vault/format.rs, src/vault/manifest.rs | cargo test (determinism test) |  | Deterministic update policy — **Done** |
-| NFR-002 |  |  |  | Determinism without crypto weakening |
+| NFR-002 | src/vault/format.rs, src/vault/manifest.rs | Per-entry IVs are random (crypto-safe); manifest ordering is deterministic via BTreeMap |  | Determinism without crypto weakening — **Done** |
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 |  |  |  | Shell completion UX |
 | NFR-005 |  |  |  | Editor/pager UX integration |
@@ -57,7 +57,7 @@
 | NFR-012 | tests/security.rs | cargo test --test security |  | Security-path tests |
 | NFR-013 |  |  |  | Determinism test coverage |
 | NFR-014 | scripts/mock-keyring.sh, scripts/run-with-keyring.sh, scripts/manual-test-sandbox.sh, scripts/manual-sandbox-shell.sh, scripts/manual-keyring-smoke.sh | bash -n scripts/mock-keyring.sh scripts/run-with-keyring.sh scripts/manual-test-sandbox.sh scripts/manual-sandbox-shell.sh scripts/manual-keyring-smoke.sh; scripts/manual-keyring-smoke.sh |  | Mock keyring backend for local integration tests with store/lookup/list/purge coverage |
-| NFR-015 |  |  |  | Test-first implementation policy |
+| NFR-015 | spec/AGENT.md | Test-first policy followed throughout; documented in spec/AGENT.md |  | Test-first implementation policy — **Done** |
 | NFR-016 | src/cli/mod.rs, src/cli/status.rs | scripts/manual-test-sandbox.sh |  | AI-agent automation CLI profile (deterministic JSON, non-interactive, stable exits) |
 | NFR-017 | src/cli/mod.rs |  |  | MCP 2025-11-25 server adapter pattern (CLI-first core + MCP tool interface) |
 
