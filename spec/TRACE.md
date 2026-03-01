@@ -60,7 +60,7 @@
 | NFR-015 | spec/AGENT.md | Test-first policy followed throughout; documented in spec/AGENT.md |  | Test-first implementation policy — **Done** |
 | NFR-016 | src/cli/mod.rs, src/cli/status.rs | scripts/manual-test-sandbox.sh |  | AI-agent automation CLI profile (deterministic JSON, non-interactive, stable exits) |
 | NFR-017 | src/cli/mod.rs |  |  | MCP 2025-11-25 server adapter pattern (CLI-first core + MCP tool interface) |
-| NFR-018 | .github/workflows/release.yml |  |  | Direct-push, per-architecture GitHub Homebrew tap release automation — Proposed |
+| NFR-018 | .github/workflows/release.yml, packaging/homebrew/git-secret-vault.rb, scripts/update-homebrew-formula.py | push-to-main trigger; publish-homebrew job; formula update script |  | Direct-push, per-architecture GitHub Homebrew tap release automation — **Done** |
 | NFR-019 | .github/workflows/release.yml, Cargo.toml |  |  | cargo-dist release packaging and publication — Proposed |
 
 <!--

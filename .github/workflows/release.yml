@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -102,10 +104,21 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
-      - name: Install cargo-cyclonedx
-        run: cargo install cargo-cyclonedx
       - name: Checkout repo (for cargo-cyclonedx)
         uses: actions/checkout@v4
+      - name: Determine version
+        id: version
+        run: |
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+          else
+            RELEASE_TAG="v${CARGO_VERSION}"
+          fi
+          echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${CARGO_VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx
       - name: Generate SBOM
         run: cargo cyclonedx --format json --all
       - name: Upload SBOM
@@ -120,3 +133,53 @@ jobs:
             **/*
             *.cdx.json
           generate_release_notes: true
+
+  publish-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get version
+        id: ver
+        run: |
+          V=$(grep '^version' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=${V}" >> "$GITHUB_OUTPUT"
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+      - name: Compute SHA256 per arch
+        id: sha
+        run: |
+          SHA_AARCH64=$(sha256sum dist/git-secret-vault-aarch64-apple-darwin/git-secret-vault | awk '{print $1}')
+          SHA_X86_MACOS=$(sha256sum dist/git-secret-vault-x86_64-apple-darwin/git-secret-vault | awk '{print $1}')
+          SHA_X86_LINUX=$(sha256sum dist/git-secret-vault-x86_64-unknown-linux-gnu/git-secret-vault | awk '{print $1}')
+          echo "aarch64=${SHA_AARCH64}" >> "$GITHUB_OUTPUT"
+          echo "x86_macos=${SHA_X86_MACOS}" >> "$GITHUB_OUTPUT"
+          echo "x86_linux=${SHA_X86_LINUX}" >> "$GITHUB_OUTPUT"
+      - name: Update formula
+        run: |
+          python3 scripts/update-homebrew-formula.py \
+            "${{ steps.ver.outputs.version }}" \
+            "${{ steps.sha.outputs.aarch64 }}" \
+            "${{ steps.sha.outputs.x86_macos }}" \
+            "${{ steps.sha.outputs.x86_linux }}"
+      - name: Push formula to tap repo
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        run: |
+          FORMULA_CONTENT=$(cat packaging/homebrew/git-secret-vault.rb)
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${HOMEBREW_TAP_TOKEN}" \
+            /repos/OWNER/homebrew-git-secret-vault/contents/Formula/git-secret-vault.rb \
+            -f message="Update git-secret-vault formula to v${{ steps.ver.outputs.version }}" \
+            -f content="$(echo "${FORMULA_CONTENT}" | base64 -w0)" \
+            -f sha="$(gh api /repos/OWNER/homebrew-git-secret-vault/contents/Formula/git-secret-vault.rb --jq .sha 2>/dev/null || echo '')" \
+            || echo "::warning::Homebrew tap update skipped (tap repo not configured)"
+
