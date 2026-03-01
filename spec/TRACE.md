@@ -11,7 +11,7 @@
 | FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — **Done** |
 | FR-007 | src/cli/harden.rs |  |  | Git hardening and drift controls — **Done** (pre-commit + pre-push hooks) |
 | FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status,diff,rm,passwd,keyring,verify,clean,doctor,compat,harden,completions,policy,config_cmd}.rs | All commands present and `ls` alias wired | 2026-03-01 | Required CLI command set — **Done** |
-| FR-009 | src/cli/init.rs | scripts/manual-test-sandbox.sh |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — In Progress |
+| FR-009 | src/cli/init.rs, src/cli/mod.rs | cargo test (default path constants verified in unit tests) |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — **Done** |
 | FR-010 | src/cli/lock.rs, src/vault/format.rs | cargo test (47 tests pass) |  | Lock workflow: no-arg lock of all tracked entries, `--remove` plaintext cleanup, `--check` drift — **Done** |
 | FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
 | FR-012 | src/cli/status.rs, src/cli/diff.rs | cargo test (--fail-if-dirty, pager, no-prompt tests pass) |  | Status --fail-if-dirty CI drift gating, $PAGER support, diff --tool flag with external tool invocation — **Done** |
@@ -31,7 +31,7 @@
 | FR-026 | src/cli/doctor.rs | cargo test |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH, keyring availability — **Done** |
 | FR-027 | src/cli/compat.rs | cargo test |  | Compatibility-check behavior — **Done** |
 | FR-028 | src/cli/harden.rs | cargo test |  | Update .gitignore with sensitive patterns; install pre-commit + pre-push hooks; --dry-run — **Done** |
-| FR-029 | src/cli/mod.rs, src/main.rs | cargo run -- --version; cargo run -- -V |  | CLI version flag support (`--version` and `-V`) — Proposed |
+| FR-029 | src/cli/mod.rs | cargo run -- --version; cargo run -- -V (both print version and exit 0) |  | CLI version flag support (`--version` and `-V`) — **Done** |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 | src/crypto/mod.rs (validate_password_strength called at init + passwd) | cargo test --lib (validate_password_strength tests, password_too_short_is_rejected) |  | Password policy minimums — **Done** |
 | SEC-003 | src/cli/policy.rs |  |  | Password policy controls — **Done** |
