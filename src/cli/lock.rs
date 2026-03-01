@@ -178,14 +178,14 @@ mod tests {
             let pw = zeroize::Zeroizing::new("pw123".to_owned());
             // Use internal logic directly: simulate run with known password.
             let vault = std::path::Path::new(&args.vault);
-            let (mut manifest, _) = format::read_manifest(vault, &*pw).unwrap();
+            let (mut manifest, _) = format::read_manifest(vault, &pw).unwrap();
             let local = std::path::Path::new("secret.env");
             let data = std::fs::read(local).unwrap();
             let entry = format::entry_from_file("secret.env", local, &data);
             manifest.upsert(entry);
             let mut updates = std::collections::BTreeMap::new();
             updates.insert("secret.env".to_owned(), data);
-            let marker = format::rewrite_vault(vault, &*pw, &updates, &manifest).unwrap();
+            let marker = format::rewrite_vault(vault, &pw, &updates, &manifest).unwrap();
             let mut outer = OuterIndex::read(std::path::Path::new(&args.index)).unwrap();
             outer.entry_count = manifest.entries.len();
             outer.integrity_marker = marker;

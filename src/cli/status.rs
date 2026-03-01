@@ -121,7 +121,6 @@ fn run_authenticated(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::vault::{
         format,
         index::OuterIndex,
@@ -167,44 +166,30 @@ mod tests {
     fn authenticated_status_detects_up_to_date_file() {
         let dir = tempdir().unwrap();
         let (vault_path, _) = setup_vault_with_entry(dir.path(), "pw", "s.env", b"secret");
-        // Write matching local file.
         std::fs::write(dir.path().join("s.env"), b"secret").unwrap();
 
-        let original = std::env::current_dir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
-
         let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        let cwd = std::env::current_dir().unwrap();
         for entry in &manifest.entries {
-            let local = cwd.join(&entry.path);
+            let local = dir.path().join(&entry.path);
             assert!(local.exists());
             let data = std::fs::read(&local).unwrap();
             assert_eq!(format::sha256_hex(&data), entry.sha256);
         }
-
-        std::env::set_current_dir(original).unwrap();
     }
 
     #[test]
     fn authenticated_status_detects_stale_file() {
         let dir = tempdir().unwrap();
         let (vault_path, _) = setup_vault_with_entry(dir.path(), "pw", "s.env", b"original");
-        // Write modified local file.
         std::fs::write(dir.path().join("s.env"), b"modified").unwrap();
 
-        let original = std::env::current_dir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
-
         let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        let cwd = std::env::current_dir().unwrap();
         for entry in &manifest.entries {
-            let local = cwd.join(&entry.path);
+            let local = dir.path().join(&entry.path);
             let data = std::fs::read(&local).unwrap();
             let local_hash = format::sha256_hex(&data);
             assert_ne!(local_hash, entry.sha256, "stale file should have different hash");
         }
-
-        std::env::set_current_dir(original).unwrap();
     }
 
     #[test]
@@ -213,16 +198,10 @@ mod tests {
         let (vault_path, _) = setup_vault_with_entry(dir.path(), "pw", "s.env", b"content");
         // Do NOT write local file.
 
-        let original = std::env::current_dir().unwrap();
-        std::env::set_current_dir(dir.path()).unwrap();
-
         let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
-        let cwd = std::env::current_dir().unwrap();
         for entry in &manifest.entries {
-            let local = cwd.join(&entry.path);
+            let local = dir.path().join(&entry.path);
             assert!(!local.exists(), "local file should be missing");
         }
-
-        std::env::set_current_dir(original).unwrap();
     }
 }
