@@ -17,6 +17,14 @@ pub struct InitArgs {
     /// Read password from stdin instead of interactive prompt
     #[arg(long)]
     pub password_stdin: bool,
+
+    /// Skip keyring lookup (no-op at init time; accepted for script consistency)
+    #[arg(long)]
+    pub no_keyring: bool,
+
+    /// Fail if keyring is required (cannot be satisfied at init time; returns error)
+    #[arg(long)]
+    pub require_keyring: bool,
 }
 
 pub fn run(args: &InitArgs, quiet: bool) -> Result<()> {
@@ -25,6 +33,15 @@ pub fn run(args: &InitArgs, quiet: bool) -> Result<()> {
 
     if vault_path.exists() {
         return Err(VaultError::VaultExists(args.vault.clone()));
+    }
+
+    // Keyring lookup cannot be satisfied at init time (no UUID exists yet).
+    if args.require_keyring {
+        return Err(VaultError::Other(
+            "--require-keyring: vault UUID is not available at init time; \
+             use `keyring save` after initialisation"
+                .to_owned(),
+        ));
     }
 
     let password = if args.password_stdin {

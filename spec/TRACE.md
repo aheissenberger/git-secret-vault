@@ -7,7 +7,7 @@
 | FR-002 | src/vault/format.rs |  | ADR-0002 | Vault format and compatibility — **Done** |
 | FR-003 | src/vault/index.rs, src/cli/{init,lock,status}.rs | cargo test (36 unit tests pass) |  | Metadata minimization and index (`.git-secret-vault.index.json`) — **Done** |
 | FR-004 | src/vault/manifest.rs, src/vault/format.rs, src/fs/mod.rs | cargo test |  | Encrypted manifest, determinism, atomicity — In Progress |
-| FR-005 | src/crypto/mod.rs |  |  | Password policy and input handling |
+| FR-005 | src/crypto/mod.rs, src/cli/{lock,unlock,init}.rs |  |  | Password policy, source chain (stdin→env→keyring→prompt), weak-password rejection, --no-keyring/--require-keyring — **Done** |
 | FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — In Progress |
 | FR-007 |  |  |  | Git hardening and drift controls |
 | FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status,diff,rm,passwd,keyring,verify,clean,doctor,compat,harden,completions,policy,config_cmd}.rs | All commands present and `ls` alias wired | 2026-03-01 | Required CLI command set — **Done** |
@@ -15,7 +15,7 @@
 | FR-010 | src/cli/lock.rs, src/vault/format.rs | cargo test (47 tests pass) |  | Lock workflow: no-arg lock of all tracked entries, `--remove` plaintext cleanup, `--check` drift — **Done** |
 | FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
 | FR-012 | src/cli/status.rs, src/cli/diff.rs | cargo test (--fail-if-dirty, pager, no-prompt tests pass) |  | Status --fail-if-dirty CI drift gating, $PAGER support — **Done** |
-| FR-013 |  |  |  | Remove, password rotation, keyring |
+| FR-013 | src/cli/rm.rs, src/cli/passwd.rs, src/cli/keyring_cmd.rs, src/cli/{lock,unlock,init}.rs | cargo test --lib | | Remove entries, password rotation with stale-keyring refresh, keyring save/status/delete/list/purge, --no-keyring/--require-keyring — **Done** |
 | FR-014 | src/cli/verify.rs, src/cli/clean.rs, src/cli/doctor.rs, src/cli/compat.rs, src/cli/harden.rs | cargo test |  | Verify, clean, doctor, compat, harden — **Done** |
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
 | FR-016 | src/cli/doctor.rs, docs/exit-codes.md |  |  | Output safety, CI, UX, exit codes — **Done** (doctor --json, exit-code contract) |

@@ -86,7 +86,62 @@ pub fn validate_password_strength(password: &str) -> Result<()> {
             "Password must be at least 8 characters".to_owned(),
         ));
     }
+    const WEAK_PASSWORDS: &[&str] = &[
+        "password", "12345678", "secret123", "qwerty123", "letmein1", "abc12345",
+    ];
+    if WEAK_PASSWORDS.contains(&password.to_lowercase().as_str()) {
+        return Err(VaultError::Other(
+            "Password is too common; choose a stronger password".to_owned(),
+        ));
+    }
     Ok(())
+}
+
+/// Obtain password from stdin, env var, system keyring, or interactive prompt.
+///
+/// Precedence:
+/// 1. `from_stdin` → read from stdin
+/// 2. `VAULT_PASSWORD` env var → use with warning
+/// 3. `vault_uuid` → try system keyring lookup
+/// 4. Interactive prompt
+///
+/// If `require_keyring` is true and keyring lookup fails (missing UUID or no
+/// credential), an error is returned instead of falling back to prompt.
+pub fn get_password_with_keyring(
+    from_stdin: bool,
+    vault_uuid: Option<&str>,
+    require_keyring: bool,
+    prompt: &str,
+) -> Result<Zeroizing<String>> {
+    if from_stdin {
+        return read_password_stdin();
+    }
+    if let Ok(val) = std::env::var("VAULT_PASSWORD") {
+        eprintln!(
+            "warning: Using VAULT_PASSWORD environment variable exposes password via \
+             process environment and system logs. Consider using --password-stdin instead."
+        );
+        return Ok(Zeroizing::new(val));
+    }
+    if let Some(uuid) = vault_uuid {
+        let keyring_pw = keyring::Entry::new("git-secret-vault", uuid)
+            .ok()
+            .and_then(|e| e.get_password().ok());
+        match keyring_pw {
+            Some(pw) => return Ok(Zeroizing::new(pw)),
+            None if require_keyring => {
+                return Err(VaultError::Other(format!(
+                    "--require-keyring: no credential found in keyring for vault {uuid}"
+                )));
+            }
+            None => {} // fall through to interactive prompt
+        }
+    } else if require_keyring {
+        return Err(VaultError::Other(
+            "--require-keyring: no vault UUID available for keyring lookup".to_owned(),
+        ));
+    }
+    prompt_password(prompt)
 }
 
 #[cfg(test)]
@@ -95,8 +150,17 @@ mod tests {
 
     #[test]
     fn validate_password_strength_accepts_long_enough() {
-        assert!(validate_password_strength("12345678").is_ok());
+        assert!(validate_password_strength("abcdefgh").is_ok());
         assert!(validate_password_strength("correct horse battery staple").is_ok());
+    }
+
+    #[test]
+    fn validate_password_strength_rejects_weak_passwords() {
+        for weak in &["password", "12345678", "secret123", "qwerty123", "letmein1", "abc12345"] {
+            let err = validate_password_strength(weak).unwrap_err();
+            let msg = err.to_string();
+            assert!(msg.contains("too common"), "expected 'too common' for {weak}: {msg}");
+        }
     }
 
     #[test]
