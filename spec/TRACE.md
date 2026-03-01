@@ -48,7 +48,7 @@
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 | src/cli/completions.rs |  |  | Shell completion UX — **Done** |
 | NFR-005 | src/cli/status.rs, src/cli/diff.rs | cargo test (pager tests pass) |  | $PAGER respected in status and diff human-readable output — **Done** |
-| NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts |
+| NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts (macOS binaries are Developer ID signed via imported certificate secrets in CI) — **Done** |
 | NFR-007 | .github/workflows/release.yml |  |  | SBOM release artifact — **Done** |
 | NFR-008 | docs/reproducible-build.md |  |  | Reproducible build documentation |
 | NFR-009 | .github/workflows/ci.yml |  |  | Cross-platform CI matrix |
@@ -61,6 +61,7 @@
 | NFR-016 | src/cli/mod.rs, src/cli/status.rs | scripts/manual-test-sandbox.sh |  | AI-agent automation CLI profile (deterministic JSON, non-interactive, stable exits) |
 | NFR-017 | src/cli/mod.rs |  |  | MCP 2025-11-25 server adapter pattern (CLI-first core + MCP tool interface) |
 | NFR-018 | .github/workflows/release.yml |  |  | Direct-push, per-architecture GitHub Homebrew tap release automation — Proposed |
+| NFR-019 | .github/workflows/release.yml, Cargo.toml |  |  | cargo-dist release packaging and publication — Proposed |
 
 <!--
 Populate rows where obvious. Leave unknown cells empty.

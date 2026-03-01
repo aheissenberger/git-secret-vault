@@ -31,6 +31,50 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
+      - name: Sign binary (macOS Developer ID)
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          set -euo pipefail
+
+          : "${MACOS_CERTIFICATE_P12_BASE64:?Missing secret MACOS_CERTIFICATE_P12_BASE64}"
+          : "${MACOS_CERTIFICATE_PASSWORD:?Missing secret MACOS_CERTIFICATE_PASSWORD}"
+          : "${MACOS_KEYCHAIN_PASSWORD:?Missing secret MACOS_KEYCHAIN_PASSWORD}"
+          : "${MACOS_SIGNING_IDENTITY:?Missing secret MACOS_SIGNING_IDENTITY}"
+
+          CERT_PATH="$RUNNER_TEMP/macos-signing-cert.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/macos-signing.keychain-db"
+          BINARY_PATH="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+
+          cleanup() {
+            rm -f "$CERT_PATH"
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          }
+          trap cleanup EXIT
+
+          python3 - <<'PY'
+          import base64
+          import os
+          cert_data = os.environ["MACOS_CERTIFICATE_P12_BASE64"]
+          cert_path = os.environ["RUNNER_TEMP"] + "/macos-signing-cert.p12"
+          with open(cert_path, "wb") as cert_file:
+              cert_file.write(base64.b64decode(cert_data))
+          PY
+
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$MACOS_KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          codesign --force --sign "$MACOS_SIGNING_IDENTITY" --options runtime --timestamp "$BINARY_PATH"
+          codesign --verify --verbose=2 "$BINARY_PATH"
+          codesign --display --verbose=2 "$BINARY_PATH"
       - name: Compute checksum (unix)
         if: runner.os != 'Windows'
         run: |
