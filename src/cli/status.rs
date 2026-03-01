@@ -9,13 +9,9 @@ use crate::vault::{format, index::OuterIndex};
 
 #[derive(Args)]
 pub struct StatusArgs {
-    /// Path to outer index file
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
-
-    /// Path to vault file (enables authenticated verification when provided with password)
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Read password from stdin for authenticated verification mode
     #[arg(long)]
@@ -35,11 +31,14 @@ pub struct StatusArgs {
 }
 
 pub fn run(args: &StatusArgs, quiet: bool, _verbose: bool) -> Result<()> {
-    let index_path = Path::new(&args.index);
-    let vault_path = Path::new(&args.vault);
+    let vault_dir = Path::new(&args.vault_dir);
+    let vault_path = vault_dir.join("vault.zip");
+    let index_path = vault_dir.join("index.json");
+    let vault_path = vault_path.as_path();
+    let index_path = index_path.as_path();
 
     if !index_path.exists() {
-        return Err(VaultError::VaultNotFound(args.index.clone()));
+        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
     }
 
     let outer = OuterIndex::read(index_path)?;
@@ -183,7 +182,7 @@ mod tests {
         content: &[u8],
     ) -> (std::path::PathBuf, std::path::PathBuf) {
         let vault_path = dir.join("vault.zip");
-        let index_path = dir.join(".index.json");
+        let index_path = dir.join("index.json");
         let mut manifest = Manifest::new("status-uuid");
         manifest.upsert(ManifestEntry {
             path: name.to_owned(),
@@ -313,8 +312,7 @@ mod tests {
         // Vault exists but we provide no password source (password_stdin=false, no_prompt=false,
         // VAULT_PASSWORD unset).
         let args = StatusArgs {
-            index: index_path.to_str().unwrap().to_owned(),
-            vault: dir.path().join("vault.zip").to_str().unwrap().to_owned(),
+            vault_dir: dir.path().to_str().unwrap().to_owned(),
             password_stdin: false,
             no_prompt: false,
             json: false,

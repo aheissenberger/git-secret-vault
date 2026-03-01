@@ -4,7 +4,9 @@ pub mod completions;
 pub mod config_cmd;
 pub mod diff;
 pub mod doctor;
+pub mod export;
 pub mod harden;
+pub mod import;
 pub mod init;
 pub mod keyring_cmd;
 pub mod lock;
@@ -38,12 +40,8 @@ pub struct Cli {
     pub mcp: bool,
 
     /// Vault archive path (used with --mcp)
-    #[arg(long, global = true, default_value = "git-secret-vault.zip")]
-    pub vault: String,
-
-    /// Vault index path (used with --mcp)
-    #[arg(long, global = true, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
+    #[arg(long, global = true, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -84,4 +82,8 @@ pub enum Commands {
     Config(config_cmd::ConfigArgs),
     /// Manage system keyring credentials for vault passwords
     Keyring(keyring_cmd::KeyringArgs),
+    /// Export vault to a portable archive
+    Export(export::ExportArgs),
+    /// Import vault from a portable archive
+    Import(import::ImportArgs),
 }

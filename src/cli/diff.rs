@@ -15,9 +15,9 @@ pub struct DiffArgs {
     /// Paths to compare (compares all tracked entries if omitted)
     pub paths: Vec<String>,
 
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Read password from stdin
     #[arg(long)]
@@ -41,9 +41,11 @@ struct EntryResult {
 }
 
 pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
+    let vault_dir = Path::new(&args.vault_dir);
+    let vault_path = vault_dir.join("vault.zip");
+    let vault_path = vault_path.as_path();
     if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
+        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
     }
 
     let password = crypto::get_password(args.password_stdin, "Vault password: ")?;

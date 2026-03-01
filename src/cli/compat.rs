@@ -10,7 +10,7 @@ use serde_json::json;
 
 use crate::error::Result;
 
-const PROFILE: &str = "AES-256 in zip AES-256-CTR (zip 2.x format)";
+const PROFILE: &str = "dual-profile AES-256-GCM (vault format v2)";
 const COMPATIBLE_TOOLS: &[&str] = &[
     "unzip 6.0+",
     "7-Zip 19+",
@@ -19,9 +19,9 @@ const COMPATIBLE_TOOLS: &[&str] = &[
 
 #[derive(Args)]
 pub struct CompatArgs {
-    /// Path to vault file used for self-test (ignored unless --self-test)
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
+    /// Path to vault directory used for self-test (ignored unless --self-test)
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Create a tiny test vault, write one entry, read it back, report pass/fail
     #[arg(long)]
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn json_output_contains_expected_keys() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault_dir: ".git-secret-vault".to_owned(),
             self_test: false,
             json: true,
         };
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn self_test_flag_runs_and_reports_pass() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault_dir: ".git-secret-vault".to_owned(),
             self_test: true,
             json: false,
         };
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn self_test_json_reports_pass() {
         let args = CompatArgs {
-            vault: "git-secret-vault.zip".to_owned(),
+            vault_dir: ".git-secret-vault".to_owned(),
             self_test: true,
             json: true,
         };

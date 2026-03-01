@@ -9,6 +9,7 @@ mod vault;
 use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Commands};
+use config::Config;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -17,7 +18,7 @@ fn main() -> Result<()> {
         tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(git_secret_vault::mcp::run_mcp_server(
-                &cli.vault, &cli.index,
+                &cli.vault_dir,
             ))
             .unwrap_or_else(|e| {
                 eprintln!("MCP server error: {e}");
@@ -30,6 +31,8 @@ fn main() -> Result<()> {
         eprintln!("error: a subcommand is required (or use --mcp to start the MCP server)");
         std::process::exit(2);
     };
+
+    let config = Config::load_default().unwrap_or_default();
 
     let result = match command {
         Commands::Init(args) => cli::init::run(args, cli.quiet, cli.verbose),
@@ -48,6 +51,8 @@ fn main() -> Result<()> {
         Commands::Completions(args) => cli::completions::run(args),
         Commands::Config(args) => cli::config_cmd::run(args, cli.quiet, cli.verbose),
         Commands::Keyring(args) => cli::keyring_cmd::run(args, cli.quiet, cli.verbose),
+        Commands::Export(args) => cli::export::run(args, &config),
+        Commands::Import(args) => cli::import::run(args, &config),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");

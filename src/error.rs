@@ -1,12 +1,10 @@
+use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum VaultError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-
-    #[error("ZIP error: {0}")]
-    Zip(#[from] zip::result::ZipError),
 
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
@@ -17,8 +15,8 @@ pub enum VaultError {
     #[error("Vault already exists at {0}")]
     VaultExists(String),
 
-    #[error("Vault not found at {0}")]
-    VaultNotFound(String),
+    #[error("vault not found at {0}")]
+    VaultNotFound(PathBuf),
 
     #[error("Wrong password or corrupt vault")]
     WrongPassword,
@@ -34,6 +32,9 @@ pub enum VaultError {
 
     #[error("{0}")]
     Other(String),
+
+    #[error("not implemented")]
+    NotImplemented,
 }
 
 pub type Result<T> = std::result::Result<T, VaultError>;

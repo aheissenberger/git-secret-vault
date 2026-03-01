@@ -11,13 +11,9 @@ use crate::vault::{format, index::OuterIndex};
 
 #[derive(Args)]
 pub struct PasswdArgs {
-    /// Path to vault file
-    #[arg(long, default_value = "git-secret-vault.zip")]
-    pub vault: String,
-
-    /// Path to outer index file
-    #[arg(long, default_value = ".git-secret-vault.index.json")]
-    pub index: String,
+    /// Path to vault directory
+    #[arg(long, default_value = ".git-secret-vault")]
+    pub vault_dir: String,
 
     /// Read OLD password from stdin instead of interactive prompt
     #[arg(long)]
@@ -33,11 +29,14 @@ pub struct PasswdArgs {
 }
 
 pub fn run(args: &PasswdArgs, quiet: bool, _verbose: bool) -> Result<()> {
-    let vault_path = Path::new(&args.vault);
-    let index_path = Path::new(&args.index);
+    let vault_dir = Path::new(&args.vault_dir);
+    let vault_path = vault_dir.join("vault.zip");
+    let index_path = vault_dir.join("index.json");
+    let vault_path = vault_path.as_path();
+    let index_path = index_path.as_path();
 
     if !vault_path.exists() {
-        return Err(VaultError::VaultNotFound(args.vault.clone()));
+        return Err(VaultError::VaultNotFound(std::path::PathBuf::from(&args.vault_dir)));
     }
 
     // Read old password.
