@@ -76,8 +76,20 @@ jobs:
       # (PRs run on the *source* but secrets are usually on the *target* -- that's *good*
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
+        shell: bash
         run: |
-          dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || 'plan' }} --output-format=json > plan-dist-manifest.json
+          set -euo pipefail
+          echo "github.event_name=${{ github.event_name }}"
+          echo "github.ref=${{ github.ref }}"
+          echo "github.ref_name=${{ github.ref_name }}"
+
+          dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || 'plan' }} --output-format=json > plan-dist-manifest.json 2> dist-plan-error.log || {
+            status=$?
+            echo "dist plan/create failed with exit code ${status}"
+            echo "--- dist-plan-error.log ---"
+            cat dist-plan-error.log || true
+            exit ${status}
+          }
           echo "dist ran successfully"
           cat plan-dist-manifest.json
           echo "manifest=$(jq -c "." plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
@@ -140,9 +152,21 @@ jobs:
         run: |
           ${{ matrix.packages_install }}
       - name: Build artifacts
+        shell: bash
         run: |
+          set -euo pipefail
           # Actually do builds and make zips and whatnot
-          dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
+          dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json 2> dist-build-error.log || {
+            status=$?
+            echo "dist build failed with exit code ${status}"
+            echo "matrix.runner=${{ matrix.runner }}"
+            echo "matrix.targets=${{ join(matrix.targets, ', ') }}"
+            echo "tag-flag='${{ needs.plan.outputs.tag-flag }}'"
+            echo "dist-args='${{ matrix.dist_args }}'"
+            echo "--- dist-build-error.log ---"
+            cat dist-build-error.log || true
+            exit ${status}
+          }
           echo "dist ran successfully"
       - id: cargo-dist
         name: Post-build
@@ -195,7 +219,15 @@ jobs:
       - id: cargo-dist
         shell: bash
         run: |
-          dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
+          set -euo pipefail
+          dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json 2> dist-global-error.log || {
+            status=$?
+            echo "dist global build failed with exit code ${status}"
+            echo "tag-flag='${{ needs.plan.outputs.tag-flag }}'"
+            echo "--- dist-global-error.log ---"
+            cat dist-global-error.log || true
+            exit ${status}
+          }
           echo "dist ran successfully"
 
           # Parse out what we just built and upload it to scratch storage
@@ -280,7 +312,15 @@ jobs:
       - id: host
         shell: bash
         run: |
-          dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
+          set -euo pipefail
+          dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json 2> dist-host-error.log || {
+            status=$?
+            echo "dist host failed with exit code ${status}"
+            echo "tag-flag='${{ needs.plan.outputs.tag-flag }}'"
+            echo "--- dist-host-error.log ---"
+            cat dist-host-error.log || true
+            exit ${status}
+          }
           echo "artifacts uploaded and released successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
