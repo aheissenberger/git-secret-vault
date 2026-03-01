@@ -25,7 +25,7 @@
 | FR-020 | src/cli/diff.rs | cargo test |  | Diff behavior: unified diff for text, binary summary, --json output, exit 1 on differences — **Done** (FR-020) |
 | FR-021 | src/cli/rm.rs | cargo test (80 unit tests pass) |  | Remove vault entries with optional local plaintext deletion — **Done** |
 | FR-022 | src/cli/passwd.rs | cargo test (80 unit tests pass) |  | Re-encrypt vault with new password, atomic rewrite, --rotate checklist — **Done** |
-| FR-023 |  |  |  | Keyring behavior (split) |
+| FR-023 | src/cli/keyring_cmd.rs | cargo test (unit tests pass) |  | Keyring behavior (split) — **Done** |
 | FR-024 | src/cli/verify.rs | cargo test (80 unit tests pass) |  | Validate vault integrity per-entry with hash verification and --json output — **Done** |
 | FR-025 | src/cli/clean.rs | cargo test (80 unit tests pass) |  | Remove tracked plaintext files safely with per-file prompt and --force flag — **Done** |
 | FR-026 | src/cli/doctor.rs | cargo test (80 unit tests pass) |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH — **Done** |

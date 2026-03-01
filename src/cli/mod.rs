@@ -6,6 +6,7 @@ pub mod diff;
 pub mod doctor;
 pub mod harden;
 pub mod init;
+pub mod keyring_cmd;
 pub mod lock;
 pub mod passwd;
 pub mod policy;
@@ -67,4 +68,6 @@ pub enum Commands {
     Policy(policy::PolicyArgs),
     /// Read and write repository config file
     Config(config_cmd::ConfigArgs),
+    /// Manage system keyring credentials for vault passwords
+    Keyring(keyring_cmd::KeyringArgs),
 }
