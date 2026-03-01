@@ -29,6 +29,7 @@ uuid = { version = "1", features = ["v4"] }
 keyring = "3"
 zeroize = { version = "1", features = ["derive"] }
 glob = "0.3"
+zip = { version = "2", features = ["aes-crypto"] }
 rmcp = { version = "0.17.0", features = ["server", "transport-io"] }
 tokio = { version = "1", features = ["full"] }
 schemars = "1"
