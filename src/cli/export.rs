@@ -62,8 +62,11 @@ pub fn run(args: &ExportArgs, _config: &crate::config::Config) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+    use std::path::Path;
     use tempfile::TempDir;
 
+    use super::ExportArgs;
     use crate::vault::Vault;
 
     #[test]
