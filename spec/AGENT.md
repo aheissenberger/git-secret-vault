@@ -60,4 +60,20 @@
 - Never use compact variants such as `InProgress`.
 - Trace event frontmatter `timestamp` must be valid UTC RFC3339, e.g. `2026-03-01T15:15:00Z`.
 - Use hyphens in the date portion (`YYYY-MM-DD`), never colons (`YYYY:MM:DD`).
-- Before handoff, run `scripts/spec-ledger/validate-req-files.ts` and `scripts/spec-ledger/validate-trace-events.ts`.
+
+## Mandatory pre-commit spec-ledger gate
+
+- Before every commit, agents must run all spec-ledger validation scripts and ensure they pass.
+- If requirement files changed, regenerate `spec/requirements/index.md` first using `scripts/spec-ledger/generate-req-index.ts`.
+- Do not commit if any of the following scripts fail:
+	- `scripts/spec-ledger/validate-req-files.ts`
+	- `scripts/spec-ledger/validate-req-index.ts`
+	- `scripts/spec-ledger/validate-trace-events.ts`
+	- `scripts/spec-ledger/validate-claims.ts`
+	- `scripts/spec-ledger/validate-req-trace-coverage.ts`
+	- `scripts/spec-ledger/validate-trace-evidence.ts`
+	- `scripts/spec-ledger/validate-trace-immutability.ts`
+	- `scripts/spec-ledger/validate-architecture-docs.ts`
+	- `scripts/spec-ledger/validate-worktree-fresh.ts`
+- Recommended one-shot command:
+	- `node scripts/spec-ledger/generate-req-index.ts && node scripts/spec-ledger/validate-req-files.ts && node scripts/spec-ledger/validate-req-index.ts && node scripts/spec-ledger/validate-trace-events.ts && node scripts/spec-ledger/validate-claims.ts && node scripts/spec-ledger/validate-req-trace-coverage.ts && node scripts/spec-ledger/validate-trace-evidence.ts && node scripts/spec-ledger/validate-trace-immutability.ts && node scripts/spec-ledger/validate-architecture-docs.ts && node scripts/spec-ledger/validate-worktree-fresh.ts`

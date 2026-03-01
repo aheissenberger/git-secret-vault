@@ -44,3 +44,19 @@
 - Never mark requirements `Done` without verification evidence.
 - Do not change externally visible behavior without corresponding REQ/TRACE/ADR updates.
 - Keep worktrees fresh against `main`; stale worktrees must rebase before merge.
+
+## Mandatory Spec-Ledger Validation (Before Every Commit)
+- Agents must run all spec-ledger validation scripts and require a clean pass before each commit.
+- If requirement files changed, regenerate `spec/requirements/index.md` first with `node scripts/spec-ledger/generate-req-index.ts`.
+- Required pre-commit checks:
+	- `node scripts/spec-ledger/validate-req-files.ts`
+	- `node scripts/spec-ledger/validate-req-index.ts`
+	- `node scripts/spec-ledger/validate-trace-events.ts`
+	- `node scripts/spec-ledger/validate-claims.ts`
+	- `node scripts/spec-ledger/validate-req-trace-coverage.ts`
+	- `node scripts/spec-ledger/validate-trace-evidence.ts`
+	- `node scripts/spec-ledger/validate-trace-immutability.ts`
+	- `node scripts/spec-ledger/validate-architecture-docs.ts`
+	- `node scripts/spec-ledger/validate-worktree-fresh.ts`
+- One-shot command agents can use:
+	- `node scripts/spec-ledger/generate-req-index.ts && node scripts/spec-ledger/validate-req-files.ts && node scripts/spec-ledger/validate-req-index.ts && node scripts/spec-ledger/validate-trace-events.ts && node scripts/spec-ledger/validate-claims.ts && node scripts/spec-ledger/validate-req-trace-coverage.ts && node scripts/spec-ledger/validate-trace-evidence.ts && node scripts/spec-ledger/validate-trace-immutability.ts && node scripts/spec-ledger/validate-architecture-docs.ts && node scripts/spec-ledger/validate-worktree-fresh.ts`

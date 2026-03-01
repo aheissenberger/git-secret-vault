@@ -31,6 +31,7 @@
 | FR-026 | src/cli/doctor.rs | cargo test |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH, keyring availability — **Done** |
 | FR-027 | src/cli/compat.rs | cargo test |  | Compatibility-check behavior — **Done** |
 | FR-028 | src/cli/harden.rs | cargo test |  | Update .gitignore with sensitive patterns; install pre-commit + pre-push hooks; --dry-run — **Done** |
+| FR-029 | src/cli/mod.rs, src/main.rs | cargo run -- --version; cargo run -- -V |  | CLI version flag support (`--version` and `-V`) — Proposed |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 | src/crypto/mod.rs (validate_password_strength called at init + passwd) | cargo test --lib (validate_password_strength tests, password_too_short_is_rejected) |  | Password policy minimums — **Done** |
 | SEC-003 | src/cli/policy.rs |  |  | Password policy controls — **Done** |
