@@ -146,6 +146,8 @@ pub fn get_password_with_keyring(
 
 #[cfg(test)]
 mod tests {
+    // Serialize tests that mutate VAULT_PASSWORD to avoid race conditions.
+    static ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
     use super::*;
 
     #[test]
@@ -182,7 +184,8 @@ mod tests {
 
     #[test]
     fn get_password_no_prompt_fails_without_source() {
-        // SAFETY: single-threaded test context
+        let _guard = ENV_MUTEX.lock().unwrap();
+        // SAFETY: serialized by ENV_MUTEX
         unsafe { std::env::remove_var("VAULT_PASSWORD") };
         let result = get_password_no_prompt(false);
         assert!(result.is_err(), "expected Err when no non-interactive source");
@@ -195,7 +198,8 @@ mod tests {
 
     #[test]
     fn get_password_no_prompt_uses_env_var() {
-        // SAFETY: single-threaded test context
+        let _guard = ENV_MUTEX.lock().unwrap();
+        // SAFETY: serialized by ENV_MUTEX
         unsafe { std::env::set_var("VAULT_PASSWORD", "env-secret") };
         let result = get_password_no_prompt(false);
         unsafe { std::env::remove_var("VAULT_PASSWORD") };
