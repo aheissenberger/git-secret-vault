@@ -19,6 +19,7 @@ fn main() -> Result<()> {
         Commands::Verify(args) => cli::verify::run(args, cli.quiet),
         Commands::Clean(args) => cli::clean::run(args, cli.quiet),
         Commands::Doctor(args) => cli::doctor::run(args, cli.quiet),
+        Commands::Compat(args) => cli::compat::run(args, cli.quiet),
         Commands::Harden(args) => cli::harden::run(args, cli.quiet),
         Commands::Passwd(args) => cli::passwd::run(args, cli.quiet),
     };
