@@ -63,6 +63,7 @@
 | NFR-017 | src/mcp/mod.rs, src/cli/mod.rs, docs/mcp-server.md | cargo test | feat/mcp-server | MCP 2025-11-25 server via rmcp — vault_status/lock/unlock/verify tools on stdio — **Done** |
 | NFR-018 | .github/workflows/release.yml, packaging/homebrew/git-secret-vault.rb, scripts/update-homebrew-formula.py | push-to-main trigger; publish-homebrew job; formula update script |  | Direct-push, per-architecture GitHub Homebrew tap release automation — **Done** |
 | NFR-019 | .github/workflows/release.yml, Cargo.toml, dist-workspace.toml | dist plan shows all 4 targets, homebrew/shell/powershell installers, checksums | feat/nfr019-cargo-dist | cargo-dist release packaging and publication — **Done** |
+| FR-034 | src/cli/export.rs, src/cli/import.rs, src/cli/mod.rs | cargo build | feat/cli-update | Export/import stub commands; all CLI commands unified to --vault-dir flag |
 
 <!--
 Populate rows where obvious. Leave unknown cells empty.

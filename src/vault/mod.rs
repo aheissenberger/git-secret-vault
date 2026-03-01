@@ -1,8 +1,5 @@
 pub mod blob;
 pub mod event_log;
-pub mod format;
-pub mod index;
-pub mod manifest;
 pub mod meta;
 pub mod snapshot;
 

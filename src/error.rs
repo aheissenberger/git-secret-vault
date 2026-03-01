@@ -32,9 +32,6 @@ pub enum VaultError {
 
     #[error("{0}")]
     Other(String),
-
-    #[error("not implemented")]
-    NotImplemented,
 }
 
 pub type Result<T> = std::result::Result<T, VaultError>;
