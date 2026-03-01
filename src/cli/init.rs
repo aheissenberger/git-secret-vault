@@ -1,0 +1,51 @@
+use clap::Args;
+
+use crate::crypto;
+use crate::error::{Result, VaultError};
+use crate::vault::{format, index::OuterIndex, manifest::Manifest};
+
+#[derive(Args)]
+pub struct InitArgs {
+    /// Path to vault file (default: vault.szv)
+    #[arg(long, default_value = "vault.szv")]
+    pub vault: String,
+
+    /// Path to outer index file (default: .safezipvault.index)
+    #[arg(long, default_value = ".safezipvault.index")]
+    pub index: String,
+
+    /// Read password from stdin instead of interactive prompt
+    #[arg(long)]
+    pub password_stdin: bool,
+}
+
+pub fn run(args: &InitArgs, quiet: bool) -> Result<()> {
+    let vault_path = std::path::Path::new(&args.vault);
+    let index_path = std::path::Path::new(&args.index);
+
+    if vault_path.exists() {
+        return Err(VaultError::VaultExists(args.vault.clone()));
+    }
+
+    let password = if args.password_stdin {
+        crypto::read_password_stdin()?
+    } else {
+        crypto::prompt_new_password()?
+    };
+
+    let vault_uuid = uuid::Uuid::new_v4().to_string();
+    let manifest = Manifest::new(&vault_uuid);
+
+    let updates = std::collections::BTreeMap::new();
+    let marker = format::rewrite_vault(vault_path, &password, &updates, &manifest)?;
+
+    let outer = OuterIndex::new(&vault_uuid, 0, marker);
+    outer.write(index_path)?;
+
+    if !quiet {
+        println!("Vault initialised: {} (UUID: {})", args.vault, vault_uuid);
+        println!("Index:             {}", args.index);
+    }
+
+    Ok(())
+}

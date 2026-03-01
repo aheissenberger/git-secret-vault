@@ -4,24 +4,24 @@
 |------------|---------------|-------------|-----------|------|
 
 | FR-001 |  |  |  | Legacy migration scaffold |
-| FR-002 |  |  |  | Vault format and compatibility |
-| FR-003 |  |  |  | Metadata minimization and index |
-| FR-004 |  |  |  | Encrypted manifest, determinism, atomicity |
-| FR-005 |  |  |  | Password policy and input handling |
-| FR-006 |  |  |  | Filesystem extraction and deletion safety |
+| FR-002 | src/vault/format.rs |  | ADR-0002 | Vault format and compatibility |
+| FR-003 | src/vault/index.rs, src/cli/status.rs | cargo test (36 unit tests pass) |  | Metadata minimization and index — **Done** |
+| FR-004 | src/vault/manifest.rs, src/vault/format.rs, src/fs/mod.rs | cargo test |  | Encrypted manifest, determinism, atomicity — InProgress |
+| FR-005 | src/crypto/mod.rs |  |  | Password policy and input handling |
+| FR-006 | src/fs/mod.rs, src/cli/unlock.rs | cargo test |  | Filesystem extraction and deletion safety — InProgress |
 | FR-007 |  |  |  | Git hardening and drift controls |
-| FR-008 |  |  |  | Required CLI command set |
-| FR-009 |  |  |  | Init workflow behavior |
-| FR-010 |  |  |  | Lock workflow behavior |
-| FR-011 |  |  |  | Unlock workflow and conflicts |
-| FR-012 |  |  |  | Status and diff behavior |
+| FR-008 | src/cli/mod.rs, src/cli/{init,lock,unlock,status}.rs |  |  | Required CLI command set |
+| FR-009 | src/cli/init.rs |  |  | Init workflow behavior — InProgress |
+| FR-010 | src/cli/lock.rs, src/vault/format.rs |  |  | Lock workflow behavior — InProgress |
+| FR-011 | src/cli/unlock.rs, src/fs/mod.rs |  |  | Unlock workflow and conflicts — InProgress |
+| FR-012 | src/cli/status.rs |  |  | Status and diff behavior — InProgress |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 |  |  |  | Verify, clean, doctor, compat, harden |
 | FR-015 |  |  |  | Config and local state model |
 | FR-016 |  |  |  | Output safety, CI, UX, exit codes |
 | FR-017 |  |  |  | Test/release quality requirements |
 | FR-018 |  |  | ADR-0002 | Documentation and locked decisions |
-| FR-019 |  |  |  | Status behavior (split) |
+| FR-019 | src/cli/status.rs, src/vault/index.rs |  |  | Status behavior (split) — InProgress |
 | FR-020 |  |  |  | Diff behavior (split) |
 | FR-021 |  |  |  | Remove behavior (split) |
 | FR-022 |  |  |  | Password rotation behavior (split) |
@@ -31,21 +31,21 @@
 | FR-026 |  |  |  | Doctor behavior (split) |
 | FR-027 |  |  |  | Compatibility-check behavior (split) |
 | FR-028 |  |  |  | Harden behavior (split) |
-| SEC-001 |  |  |  | Metadata exposure default safety |
+| SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 |  |  |  | Password policy minimums |
 | SEC-003 |  |  |  | Password policy controls |
 | SEC-004 |  |  |  | Env password leakage warning |
-| SEC-005 |  |  |  | Memory hygiene best-effort |
-| SEC-006 |  |  |  | Path traversal prevention |
-| SEC-007 |  |  |  | Symlink default deny |
+| SEC-005 | src/crypto/mod.rs |  |  | Memory hygiene best-effort — **Done** |
+| SEC-006 | src/fs/mod.rs | cargo test (safe_join tests) |  | Path traversal prevention — **Done** |
+| SEC-007 | src/cli/unlock.rs, src/vault/format.rs |  |  | Symlink default deny — **Done** |
 | SEC-008 |  |  |  | Post-lock plaintext removal |
 | SEC-009 |  |  |  | Shred warning semantics |
-| SEC-010 |  |  |  | Secret output redaction |
-| SEC-011 |  |  |  | Password output redaction |
-| SEC-012 |  |  |  | Logging verbosity controls |
-| NFR-001 |  |  |  | Deterministic update policy |
+| SEC-010 | src/cli/status.rs, src/cli/lock.rs, src/cli/unlock.rs |  |  | Secret output redaction — **Done** |
+| SEC-011 | src/crypto/mod.rs |  |  | Password output redaction — **Done** |
+| SEC-012 | src/cli/mod.rs |  |  | Logging verbosity controls — **Done** |
+| NFR-001 | src/vault/format.rs, src/vault/manifest.rs | cargo test (determinism test) |  | Deterministic update policy — **Done** |
 | NFR-002 |  |  |  | Determinism without crypto weakening |
-| NFR-003 |  |  |  | Atomic write IO policy |
+| NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 |  |  |  | Shell completion UX |
 | NFR-005 |  |  |  | Editor/pager UX integration |
 | NFR-006 |  |  |  | Signed release artifacts |
@@ -57,6 +57,7 @@
 | NFR-012 |  |  |  | Security-path tests |
 | NFR-013 |  |  |  | Determinism test coverage |
 | NFR-014 |  |  |  | Keyring integration tests |
+| NFR-015 |  |  |  | Test-first implementation policy |
 
 <!--
 Populate rows where obvious. Leave unknown cells empty.

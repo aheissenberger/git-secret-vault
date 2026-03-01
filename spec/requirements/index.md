@@ -45,6 +45,7 @@ Source of truth: `spec/requirements/*.md`
 - NFR-012 | Proposed | Security-focused tests must cover zip-slip prevention, symlink policy, and permission handling.
 - NFR-013 | Proposed | Determinism test coverage must validate stable archive ordering across repeated locks within allowed entropy constraints.
 - NFR-014 | Proposed | Keyring integration tests must cover save/retrieve/delete/list/purge and stale credential detection.
+- NFR-015 | Proposed | Tests must be created or updated before implementation code changes are added.
 - SEC-001 | Proposed | Default configuration must not expose secret filenames or paths without password access.
 - SEC-002 | Proposed | Enforce configurable minimum password policy with secure defaults.
 - SEC-003 | Proposed | Expose password policy inspection and update controls through configuration workflows.

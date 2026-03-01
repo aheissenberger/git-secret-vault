@@ -5,3 +5,16 @@ edition = "2024"
 rust-version = "1.93"
 
 [dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+rpassword = "7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
+zip = { version = "2", features = ["aes-crypto"] }
+zeroize = { version = "1", features = ["derive"] }
