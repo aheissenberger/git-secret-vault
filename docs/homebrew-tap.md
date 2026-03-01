@@ -4,19 +4,19 @@ GitSecretVault is distributed via a GitHub-hosted Homebrew tap.
 
 ## Tap repository convention
 
-The tap repository is named `homebrew-git-secret-vault` and lives under the same
-GitHub organisation as this project:
+The tap repository is named `homebrew-tools` and lives under the same
+GitHub account as this project:
 
 ```
-OWNER/homebrew-git-secret-vault
+aheissenberger/homebrew-tools
 ```
 
-Homebrew resolves `brew tap OWNER/git-secret-vault` to that repository automatically.
+Homebrew resolves `brew tap aheissenberger/tools` to that repository automatically.
 
 ## Installation
 
 ```sh
-brew tap OWNER/git-secret-vault
+brew tap aheissenberger/tools
 brew install git-secret-vault
 ```
 
@@ -25,7 +25,7 @@ brew install git-secret-vault
 The release workflow pushes updated formula files to the tap repository.  To
 enable this, create a GitHub Actions secret named `HOMEBREW_TAP_TOKEN` in the
 **source** repository (this repo) containing a GitHub Personal Access Token (PAT)
-with **repo write** access to `OWNER/homebrew-git-secret-vault`.
+with **repo write** access to `aheissenberger/homebrew-tools`.
 
 The workflow step that pushes to the tap is gated on `env.HOMEBREW_TAP_TOKEN != ''`,
 so CI passes safely even when the secret is not yet configured.

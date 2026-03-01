@@ -15,8 +15,12 @@ fn is_mock_active() -> bool {
 }
 
 fn store_dir() -> PathBuf {
-    let base = std::env::var("GSV_MOCK_KEYRING_DIR")
-        .unwrap_or_else(|_| format!("{}/gsv-mock-keyring-default", std::env::temp_dir().display()));
+    let base = std::env::var("GSV_MOCK_KEYRING_DIR").unwrap_or_else(|_| {
+        format!(
+            "{}/gsv-mock-keyring-default",
+            std::env::temp_dir().display()
+        )
+    });
     PathBuf::from(base).join("items")
 }
 

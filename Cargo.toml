@@ -3,9 +3,9 @@ name = "git-secret-vault"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.93"
-repository = "https://github.com/OWNER/git-secret-vault"
+repository = "https://github.com/aheissenberger/git-secret-vault"
 description = "Encrypted secret vault stored in git using AES-256 ZIP archives"
-homepage = "https://github.com/OWNER/git-secret-vault"
+homepage = "https://github.com/aheissenberger/git-secret-vault"
 license = "MIT"
 
 [dependencies]

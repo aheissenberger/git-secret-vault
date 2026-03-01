@@ -117,9 +117,7 @@ To verify a downloaded binary:
 ```bash
 cosign verify-blob \
   --bundle git-secret-vault.sigstore.json \
-  --certificate-identity-regexp "https://github.com/OWNER/git-secret-vault/.*" \
+	--certificate-identity-regexp "https://github.com/aheissenberger/git-secret-vault/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
   git-secret-vault
 ```
-
-Replace `OWNER` with the GitHub organisation or user that owns the repository. The `.sigstore.json` bundle is published alongside each release binary.

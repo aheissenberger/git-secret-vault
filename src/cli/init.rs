@@ -67,7 +67,10 @@ pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
 
     // Offer to save password to keyring (interactive only, not when stdin is consumed).
     if !args.no_keyring && !args.password_stdin {
-        eprint!("Save password to system keyring for vault {}? [y/N] ", &vault_uuid[..8]);
+        eprint!(
+            "Save password to system keyring for vault {}? [y/N] ",
+            &vault_uuid[..8]
+        );
         let mut answer = String::new();
         std::io::stdin().read_line(&mut answer).ok();
         if answer.trim().eq_ignore_ascii_case("y") {
