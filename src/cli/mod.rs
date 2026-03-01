@@ -1,5 +1,6 @@
 pub mod clean;
 pub mod compat;
+pub mod config_cmd;
 pub mod diff;
 pub mod doctor;
 pub mod harden;
@@ -58,4 +59,6 @@ pub enum Commands {
     Diff(diff::DiffArgs),
     /// Re-encrypt vault with a new password
     Passwd(passwd::PasswdArgs),
+    /// Read and write repository config file
+    Config(config_cmd::ConfigArgs),
 }
