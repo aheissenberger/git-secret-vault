@@ -45,7 +45,7 @@ pub struct LockArgs {
     pub require_keyring: bool,
 }
 
-pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &LockArgs, quiet: bool, verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
     let index_path = Path::new(&args.index);
 
@@ -129,6 +129,16 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
         if !quiet {
             println!("locked: {canonical}");
         }
+        if verbose {
+            println!(
+                "  sha256: {}",
+                format::sha256_hex(&std::fs::read(local).unwrap_or_default())
+            );
+            println!(
+                "  size:   {} bytes",
+                std::fs::metadata(local).map(|m| m.len()).unwrap_or(0)
+            );
+        }
     }
 
     if args.check {
@@ -187,11 +197,20 @@ mod tests {
     use crate::vault::{format, index::OuterIndex, manifest::Manifest};
     use tempfile::tempdir;
 
-    fn setup_vault(dir: &std::path::Path, password: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+    fn setup_vault(
+        dir: &std::path::Path,
+        password: &str,
+    ) -> (std::path::PathBuf, std::path::PathBuf) {
         let vault_path = dir.join("vault.zip");
         let index_path = dir.join(".index.json");
         let manifest = Manifest::new("test-uuid");
-        let marker = format::rewrite_vault(&vault_path, password, &std::collections::BTreeMap::new(), &manifest).unwrap();
+        let marker = format::rewrite_vault(
+            &vault_path,
+            password,
+            &std::collections::BTreeMap::new(),
+            &manifest,
+        )
+        .unwrap();
         let outer = OuterIndex::new("test-uuid", 0, marker);
         outer.write(&index_path).unwrap();
         (vault_path, index_path)
@@ -311,7 +330,11 @@ mod tests {
         };
         let (loaded_manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
         let path_strings: Vec<String> = if args.paths.is_empty() {
-            loaded_manifest.entries.iter().map(|e| e.path.clone()).collect()
+            loaded_manifest
+                .entries
+                .iter()
+                .map(|e| e.path.clone())
+                .collect()
         } else {
             args.paths.clone()
         };

@@ -32,7 +32,7 @@ pub struct RmArgs {
     pub remove_local: bool,
 }
 
-pub fn run(args: &RmArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &RmArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
     let index_path = Path::new(&args.index);
 
@@ -201,8 +201,7 @@ mod tests {
             });
             updates.insert((*name).to_owned(), content.to_vec());
         }
-        let marker =
-            format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
+        let marker = format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
         let outer = OuterIndex::new("test-uuid", entries.len(), marker);
         outer.write(&index_path).unwrap();
         (vault_path, index_path)
@@ -211,11 +210,8 @@ mod tests {
     #[test]
     fn rm_removes_entry_from_manifest() {
         let dir = tempdir().unwrap();
-        let (vault_path, index_path) = setup_vault(
-            dir.path(),
-            "pw",
-            &[("a.env", b"aaa"), ("b.env", b"bbb")],
-        );
+        let (vault_path, index_path) =
+            setup_vault(dir.path(), "pw", &[("a.env", b"aaa"), ("b.env", b"bbb")]);
 
         let args = RmArgs {
             paths: vec!["a.env".to_owned()],

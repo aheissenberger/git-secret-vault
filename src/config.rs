@@ -1,6 +1,6 @@
+use crate::error::{Result, VaultError};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use crate::error::{Result, VaultError};
 
 /// Conflict resolution policy for unlock.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -49,9 +49,15 @@ impl Default for Config {
     }
 }
 
-fn default_vault_path() -> String { "git-secret-vault.zip".to_owned() }
-fn default_index_path() -> String { ".git-secret-vault.index.json".to_owned() }
-fn default_min_password_length() -> u8 { 8 }
+fn default_vault_path() -> String {
+    "git-secret-vault.zip".to_owned()
+}
+fn default_index_path() -> String {
+    ".git-secret-vault.index.json".to_owned()
+}
+fn default_min_password_length() -> u8 {
+    8
+}
 
 pub const CONFIG_FILE: &str = ".git-secret-vault.toml";
 
@@ -95,7 +101,11 @@ mod tests {
     fn round_trip_save_and_load() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        let cfg = Config { password_min_length: 12, status_privacy_mode: true, ..Default::default() };
+        let cfg = Config {
+            password_min_length: 12,
+            status_privacy_mode: true,
+            ..Default::default()
+        };
         cfg.save(&path).unwrap();
         let loaded = Config::load(&path).unwrap();
         assert_eq!(loaded.password_min_length, 12);

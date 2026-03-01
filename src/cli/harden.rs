@@ -21,6 +21,16 @@ if [ $? -ne 0 ]; then
 fi
 "#;
 
+const PRE_PUSH_SCRIPT: &str = r#"#!/bin/sh
+# Installed by git-secret-vault harden
+git-secret-vault status --fail-if-dirty --password-stdin <<< "" 2>/dev/null || true
+git-secret-vault lock --check
+if [ $? -ne 0 ]; then
+  echo "git-secret-vault: vault is stale. Run 'git-secret-vault lock' before pushing." >&2
+  exit 1
+fi
+"#;
+
 #[derive(Args)]
 pub struct HardenArgs {
     /// Path to .gitignore file to update
@@ -36,7 +46,7 @@ pub struct HardenArgs {
     pub dry_run: bool,
 }
 
-pub fn run(args: &HardenArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &HardenArgs, quiet: bool, _verbose: bool) -> Result<()> {
     update_gitignore(args, quiet)?;
 
     if args.hooks {
@@ -135,6 +145,8 @@ fn install_pre_commit_hook(args: &HardenArgs, quiet: bool) -> Result<()> {
         if !quiet {
             println!("[hooks] would write: {}", hook_path.display());
             println!("[hooks] would chmod +x: {}", hook_path.display());
+            println!("[hooks] would write: .git/hooks/pre-push");
+            println!("[hooks] would chmod +x: .git/hooks/pre-push");
         }
         return Ok(());
     }
@@ -157,6 +169,21 @@ fn install_pre_commit_hook(args: &HardenArgs, quiet: bool) -> Result<()> {
         println!("Installed pre-commit hook: {}", hook_path.display());
     }
 
+    // Install pre-push hook.
+    let push_hook_path = Path::new(".git/hooks/pre-push");
+    std::fs::write(push_hook_path, PRE_PUSH_SCRIPT.as_bytes()).map_err(VaultError::Io)?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o755);
+        std::fs::set_permissions(push_hook_path, perms).map_err(VaultError::Io)?;
+    }
+
+    if !quiet {
+        println!("Installed pre-push hook: {}", push_hook_path.display());
+    }
+
     Ok(())
 }
 
@@ -176,7 +203,7 @@ mod tests {
             hooks: false,
             dry_run: false,
         };
-        run(&args, true).unwrap();
+        run(&args, true, false).unwrap();
 
         let content = std::fs::read_to_string(&gitignore).unwrap();
         for pattern in SENSITIVE_PATTERNS {
@@ -198,10 +225,14 @@ mod tests {
             hooks: false,
             dry_run: false,
         };
-        run(&args, true).unwrap();
+        run(&args, true, false).unwrap();
 
         let content = std::fs::read_to_string(&gitignore).unwrap();
-        assert_eq!(content.matches("*.env").count(), 1, "should not duplicate *.env");
+        assert_eq!(
+            content.matches("*.env").count(),
+            1,
+            "should not duplicate *.env"
+        );
     }
 
     #[test]
@@ -215,7 +246,7 @@ mod tests {
             hooks: false,
             dry_run: true,
         };
-        run(&args, true).unwrap();
+        run(&args, true, false).unwrap();
 
         let content = std::fs::read_to_string(&gitignore).unwrap();
         assert_eq!(content, "node_modules/\n", "dry-run must not modify file");
@@ -232,7 +263,7 @@ mod tests {
             hooks: false,
             dry_run: false,
         };
-        run(&args, true).unwrap();
+        run(&args, true, false).unwrap();
 
         assert!(gitignore.exists());
         let content = std::fs::read_to_string(&gitignore).unwrap();
@@ -259,7 +290,11 @@ mod tests {
         let meta = std::fs::metadata(&hook_path).unwrap();
         let mode = meta.permissions().mode();
         assert!(mode & 0o111 != 0, "pre-commit hook must be executable");
-        assert!(std::fs::read_to_string(&hook_path).unwrap().contains("git-secret-vault lock --check"));
+        assert!(
+            std::fs::read_to_string(&hook_path)
+                .unwrap()
+                .contains("git-secret-vault lock --check")
+        );
     }
 
     #[test]

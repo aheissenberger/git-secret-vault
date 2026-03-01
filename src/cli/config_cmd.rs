@@ -1,6 +1,6 @@
-use clap::{Args, Subcommand};
-use crate::config::{Config, ConflictDefault, CONFIG_FILE};
+use crate::config::{CONFIG_FILE, Config, ConflictDefault};
 use crate::error::{Result, VaultError};
+use clap::{Args, Subcommand};
 use std::path::Path;
 
 #[derive(Args)]
@@ -37,7 +37,7 @@ pub enum ConfigSubcommand {
     Init,
 }
 
-pub fn run(args: &ConfigArgs, _quiet: bool) -> Result<()> {
+pub fn run(args: &ConfigArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     match &args.subcommand {
         ConfigSubcommand::Show { json } => cmd_show(*json),
         ConfigSubcommand::Set {
@@ -47,7 +47,14 @@ pub fn run(args: &ConfigArgs, _quiet: bool) -> Result<()> {
             diff_tool,
             min_password_length,
             status_privacy_mode,
-        } => cmd_set(vault, index, conflict_default, diff_tool, *min_password_length, *status_privacy_mode),
+        } => cmd_set(
+            vault,
+            index,
+            conflict_default,
+            diff_tool,
+            *min_password_length,
+            *status_privacy_mode,
+        ),
         ConfigSubcommand::Init => cmd_init(),
     }
 }
@@ -79,16 +86,24 @@ fn cmd_set(
     status_privacy_mode: Option<bool>,
 ) -> Result<()> {
     let mut cfg = Config::load_default()?;
-    if let Some(v) = vault { cfg.vault = v.clone(); }
-    if let Some(v) = index { cfg.index = v.clone(); }
+    if let Some(v) = vault {
+        cfg.vault = v.clone();
+    }
+    if let Some(v) = index {
+        cfg.index = v.clone();
+    }
     if let Some(v) = conflict_default {
         cfg.conflict_default = parse_conflict_default(v)?;
     }
     if let Some(v) = diff_tool {
         cfg.diff_tool = if v.is_empty() { None } else { Some(v.clone()) };
     }
-    if let Some(v) = min_password_length { cfg.password_min_length = v; }
-    if let Some(v) = status_privacy_mode { cfg.status_privacy_mode = v; }
+    if let Some(v) = min_password_length {
+        cfg.password_min_length = v;
+    }
+    if let Some(v) = status_privacy_mode {
+        cfg.status_privacy_mode = v;
+    }
     cfg.save(Path::new(CONFIG_FILE))?;
     Ok(())
 }
@@ -96,7 +111,9 @@ fn cmd_set(
 fn cmd_init() -> Result<()> {
     let path = Path::new(CONFIG_FILE);
     if path.exists() {
-        return Err(VaultError::Other(format!("config file already exists: {CONFIG_FILE}")));
+        return Err(VaultError::Other(format!(
+            "config file already exists: {CONFIG_FILE}"
+        )));
     }
     Config::default().save(path)?;
     println!("Created {CONFIG_FILE}");
@@ -109,6 +126,8 @@ fn parse_conflict_default(s: &str) -> Result<ConflictDefault> {
         "force" => Ok(ConflictDefault::Force),
         "keep-local" => Ok(ConflictDefault::KeepLocal),
         "keep-both" => Ok(ConflictDefault::KeepBoth),
-        other => Err(VaultError::Other(format!("unknown conflict-default value: {other}"))),
+        other => Err(VaultError::Other(format!(
+            "unknown conflict-default value: {other}"
+        ))),
     }
 }

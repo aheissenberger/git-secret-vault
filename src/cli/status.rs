@@ -34,7 +34,7 @@ pub struct StatusArgs {
     pub no_prompt: bool,
 }
 
-pub fn run(args: &StatusArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &StatusArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let index_path = Path::new(&args.index);
     let vault_path = Path::new(&args.vault);
 
@@ -45,9 +45,8 @@ pub fn run(args: &StatusArgs, quiet: bool) -> Result<()> {
     let outer = OuterIndex::read(index_path)?;
 
     // Determine if a non-interactive password source is available.
-    let has_password_source = args.password_stdin
-        || args.no_prompt
-        || std::env::var("VAULT_PASSWORD").is_ok();
+    let has_password_source =
+        args.password_stdin || args.no_prompt || std::env::var("VAULT_PASSWORD").is_ok();
 
     // Authenticated verification mode: vault exists and a password source is available.
     if vault_path.exists() && has_password_source {
@@ -236,7 +235,10 @@ mod tests {
             let local = dir.path().join(&entry.path);
             let data = std::fs::read(&local).unwrap();
             let local_hash = format::sha256_hex(&data);
-            assert_ne!(local_hash, entry.sha256, "stale file should have different hash");
+            assert_ne!(
+                local_hash, entry.sha256,
+                "stale file should have different hash"
+            );
         }
     }
 
@@ -304,7 +306,7 @@ mod tests {
 
     #[test]
     fn fail_if_dirty_without_password_source_is_error() {
-        use crate::cli::status::{run, StatusArgs};
+        use crate::cli::status::{StatusArgs, run};
         let dir = tempdir().unwrap();
         // Create a minimal index so run() can reach the password-source check.
         let (_, index_path) = setup_vault_with_entry(dir.path(), "pw", "s.env", b"x");
@@ -321,7 +323,7 @@ mod tests {
         // Clear env var in case it leaks from the environment.
         // SAFETY: single-threaded test context
         unsafe { std::env::remove_var("VAULT_PASSWORD") };
-        let result = run(&args, true);
+        let result = run(&args, true, false);
         assert!(result.is_err(), "expected error when no password source");
         let msg = result.unwrap_err().to_string();
         assert!(

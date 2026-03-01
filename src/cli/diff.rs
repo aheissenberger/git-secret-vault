@@ -26,6 +26,10 @@ pub struct DiffArgs {
     /// Output machine-readable JSON
     #[arg(long)]
     pub json: bool,
+
+    /// External diff tool to invoke (overrides $DIFF_TOOL and config diff_tool)
+    #[arg(long)]
+    pub tool: Option<String>,
 }
 
 #[derive(Debug)]
@@ -36,7 +40,7 @@ struct EntryResult {
     binary: bool,
 }
 
-pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
+pub fn run(args: &DiffArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
     if !vault_path.exists() {
         return Err(VaultError::VaultNotFound(args.vault.clone()));
@@ -111,9 +115,8 @@ pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
             _ => {
                 let vault_hash = sha256_short(&vault_bytes);
                 let local_hash = sha256_short(&local_bytes);
-                let summary = format!(
-                    "Binary files differ (vault: {vault_hash}, local: {local_hash})"
-                );
+                let summary =
+                    format!("Binary files differ (vault: {vault_hash}, local: {local_hash})");
                 results.push(EntryResult {
                     path: entry.path.clone(),
                     status: "modified",
@@ -140,6 +143,12 @@ pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
 
     let has_changes = results.iter().any(|r| r.status != "identical");
 
+    // Resolve external diff tool: --tool flag > $DIFF_TOOL env var.
+    let diff_tool = args
+        .tool
+        .clone()
+        .or_else(|| std::env::var("DIFF_TOOL").ok());
+
     if args.json {
         let entries: Vec<_> = results
             .iter()
@@ -154,6 +163,28 @@ pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
             .collect();
         let out = json!({ "entries": entries, "has_changes": has_changes });
         println!("{}", serde_json::to_string_pretty(&out).unwrap());
+    } else if let Some(ref tool) = diff_tool {
+        // External tool mode: invoke the tool for each modified entry.
+        for r in &results {
+            if r.status == "modified" {
+                // Write vault version to a temp file and invoke the tool.
+                let vault_bytes = format::read_entry(vault_path, &password, &r.path)?;
+                let local_path = cwd.join(&r.path);
+                let tmp = tempfile::Builder::new()
+                    .prefix("gsv-vault-")
+                    .suffix(&format!("-{}", r.path.replace('/', "_")))
+                    .tempfile()
+                    .map_err(VaultError::Io)?;
+                std::fs::write(tmp.path(), &vault_bytes).map_err(VaultError::Io)?;
+                std::process::Command::new(tool)
+                    .arg(tmp.path())
+                    .arg(&local_path)
+                    .status()
+                    .map_err(|e| VaultError::Other(format!("diff tool error: {e}")))?;
+            } else if r.status != "identical" {
+                println!("{}: {}", r.status, r.path);
+            }
+        }
     } else {
         let mut output = String::new();
         for r in &results {
@@ -357,9 +388,7 @@ fn compute_hunks(a: &[&str], b: &[&str], ctx: usize) -> Vec<String> {
             .map(|(_, _, _, nl)| *nl)
             .unwrap_or(1);
 
-        let mut hunk = format!(
-            "@@ -{old_start},{old_count} +{new_start},{new_count} @@\n"
-        );
+        let mut hunk = format!("@@ -{old_start},{old_count} +{new_start},{new_count} @@\n");
         for (op, text, _, _) in slice {
             match op {
                 Op::Equal => hunk.push_str(&format!(" {text}\n")),
@@ -396,8 +425,14 @@ mod tests {
         let diff = unified_diff("file.txt", vault, local);
         assert!(diff.contains("-old line"), "missing removal: {diff}");
         assert!(diff.contains("+new line"), "missing addition: {diff}");
-        assert!(diff.contains("--- vault/file.txt"), "missing vault header: {diff}");
-        assert!(diff.contains("+++ local/file.txt"), "missing local header: {diff}");
+        assert!(
+            diff.contains("--- vault/file.txt"),
+            "missing vault header: {diff}"
+        );
+        assert!(
+            diff.contains("+++ local/file.txt"),
+            "missing local header: {diff}"
+        );
     }
 
     #[test]
@@ -471,6 +506,9 @@ mod tests {
         let vault = "line one\nremoved line\n";
         let local = "line one\n";
         let diff = unified_diff("f.txt", vault, local);
-        assert!(diff.contains("-removed line"), "expected -removed line in: {diff}");
+        assert!(
+            diff.contains("-removed line"),
+            "expected -removed line in: {diff}"
+        );
     }
 }

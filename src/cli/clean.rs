@@ -28,7 +28,7 @@ pub struct CleanArgs {
     pub force: bool,
 }
 
-pub fn run(args: &CleanArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &CleanArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
 
     if !vault_path.exists() {
@@ -73,9 +73,7 @@ fn prompt_yes(prompt: &str) -> Result<bool> {
     print!("{prompt}");
     io::stdout().flush().map_err(VaultError::Io)?;
     let mut answer = String::new();
-    io::stdin()
-        .read_line(&mut answer)
-        .map_err(VaultError::Io)?;
+    io::stdin().read_line(&mut answer).map_err(VaultError::Io)?;
     Ok(matches!(answer.trim().to_lowercase().as_str(), "y" | "yes"))
 }
 

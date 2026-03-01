@@ -32,7 +32,7 @@ pub struct PasswdArgs {
     pub rotate: bool,
 }
 
-pub fn run(args: &PasswdArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &PasswdArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
     let index_path = Path::new(&args.index);
 
@@ -59,6 +59,7 @@ pub fn run(args: &PasswdArgs, quiet: bool) -> Result<()> {
     } else {
         crypto::prompt_new_password()?
     };
+    crypto::validate_password_strength(&new_password)?;
 
     // Rewrite vault with new password atomically.
     let marker = format::rewrite_vault(vault_path, &new_password, &updates, &manifest)?;
@@ -72,12 +73,12 @@ pub fn run(args: &PasswdArgs, quiet: bool) -> Result<()> {
 
         // If a keyring credential exists for this vault, update it with the new password.
         let uuid = outer.uuid.clone();
-        if let Ok(entry) = keyring::Entry::new("git-secret-vault", &uuid) {
-            if entry.get_password().is_ok() {
-                if entry.set_password(&new_password).is_ok() && !quiet {
-                    println!("✓ Updated keyring credential for vault {uuid}");
-                }
-            }
+        if let Ok(entry) = keyring::Entry::new("git-secret-vault", &uuid)
+            && entry.get_password().is_ok()
+            && entry.set_password(&new_password).is_ok()
+            && !quiet
+        {
+            println!("✓ Updated keyring credential for vault {uuid}");
         }
     }
 
@@ -127,8 +128,7 @@ mod tests {
             });
             updates.insert((*name).to_owned(), content.to_vec());
         }
-        let marker =
-            format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
+        let marker = format::rewrite_vault(&vault_path, password, &updates, &manifest).unwrap();
         let outer = OuterIndex::new("uuid", entries.len(), marker);
         outer.write(&index_path).unwrap();
         (vault_path, index_path)
@@ -137,11 +137,8 @@ mod tests {
     #[test]
     fn passwd_reencrypts_with_new_password() {
         let dir = tempdir().unwrap();
-        let (vault_path, index_path) = setup_vault(
-            dir.path(),
-            "old-pw",
-            &[("secret.env", b"sensitive data")],
-        );
+        let (vault_path, index_path) =
+            setup_vault(dir.path(), "old-pw", &[("secret.env", b"sensitive data")]);
 
         let old_password = zeroize::Zeroizing::new("old-pw".to_owned());
         let new_password = zeroize::Zeroizing::new("new-pw".to_owned());
@@ -157,7 +154,8 @@ mod tests {
         }
 
         // Rewrite with new password.
-        let marker = format::rewrite_vault(&vault_path, &new_password, &updates, &manifest).unwrap();
+        let marker =
+            format::rewrite_vault(&vault_path, &new_password, &updates, &manifest).unwrap();
 
         // Update index.
         let mut outer = OuterIndex::read(&index_path).unwrap();
@@ -210,8 +208,7 @@ mod tests {
     #[test]
     fn passwd_index_marker_updated_after_rotation() {
         let dir = tempdir().unwrap();
-        let (vault_path, index_path) =
-            setup_vault(dir.path(), "old-pw", &[("k.env", b"val")]);
+        let (vault_path, index_path) = setup_vault(dir.path(), "old-pw", &[("k.env", b"val")]);
 
         let old_pw = zeroize::Zeroizing::new("old-pw".to_owned());
         let new_pw = zeroize::Zeroizing::new("new-pw".to_owned());

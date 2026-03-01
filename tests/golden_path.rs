@@ -27,8 +27,7 @@ fn init_vault(
     let vault_path = dir.join("vault.zip");
     let index_path = dir.join(".git-secret-vault.index.json");
     let manifest = make_manifest(uuid);
-    let marker =
-        format::rewrite_vault(&vault_path, password, &BTreeMap::new(), &manifest).unwrap();
+    let marker = format::rewrite_vault(&vault_path, password, &BTreeMap::new(), &manifest).unwrap();
     let outer = OuterIndex::new(uuid, 0, marker);
     outer.write(&index_path).unwrap();
     (vault_path, index_path)
@@ -117,7 +116,13 @@ fn lock_rm_entry_gone() {
     let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-3", "rmpass");
 
     lock_entry(&vault_path, &index_path, "rmpass", "keep.env", b"keep-me");
-    lock_entry(&vault_path, &index_path, "rmpass", "delete.env", b"delete-me");
+    lock_entry(
+        &vault_path,
+        &index_path,
+        "rmpass",
+        "delete.env",
+        b"delete-me",
+    );
 
     // Remove "delete.env" using the rm logic.
     let (mut manifest, _) = format::read_manifest(&vault_path, "rmpass").unwrap();
@@ -159,7 +164,13 @@ fn lock_passwd_unlock_with_new_password() {
     let dir = tempdir().unwrap();
     let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-4", "oldpass123");
 
-    lock_entry(&vault_path, &index_path, "oldpass123", "secret.env", b"top-secret-data");
+    lock_entry(
+        &vault_path,
+        &index_path,
+        "oldpass123",
+        "secret.env",
+        b"top-secret-data",
+    );
 
     // Rotate password: read all entries with old password, rewrite with new.
     let old_pw = zeroize::Zeroizing::new("oldpass123".to_owned());
@@ -214,11 +225,21 @@ fn lock_check_detects_drift() {
     let (vault_path, index_path) = init_vault(dir.path(), "vault-uuid-6", "checkpass");
 
     let original = b"ORIGINAL_VALUE=abc";
-    lock_entry(&vault_path, &index_path, "checkpass", "checked.env", original);
+    lock_entry(
+        &vault_path,
+        &index_path,
+        "checkpass",
+        "checked.env",
+        original,
+    );
 
     // Read manifest to get the stored hash.
     let (manifest, _) = format::read_manifest(&vault_path, "checkpass").unwrap();
-    let entry = manifest.entries.iter().find(|e| e.path == "checked.env").unwrap();
+    let entry = manifest
+        .entries
+        .iter()
+        .find(|e| e.path == "checked.env")
+        .unwrap();
     let stored_hash = entry.sha256.clone();
 
     // Simulate drift: plaintext has changed.
@@ -263,11 +284,22 @@ fn lock_is_deterministic() {
 
     // Entry metadata must match.
     assert_eq!(manifest_a.entries.len(), manifest_b.entries.len());
-    let entry_a = manifest_a.entries.iter().find(|e| e.path == "data.txt").unwrap();
-    let entry_b = manifest_b.entries.iter().find(|e| e.path == "data.txt").unwrap();
+    let entry_a = manifest_a
+        .entries
+        .iter()
+        .find(|e| e.path == "data.txt")
+        .unwrap();
+    let entry_b = manifest_b
+        .entries
+        .iter()
+        .find(|e| e.path == "data.txt")
+        .unwrap();
 
     assert_eq!(entry_a.path, entry_b.path, "entry paths must be identical");
-    assert_eq!(entry_a.sha256, entry_b.sha256, "sha256 hashes must be identical");
+    assert_eq!(
+        entry_a.sha256, entry_b.sha256,
+        "sha256 hashes must be identical"
+    );
     assert_eq!(entry_a.size, entry_b.size, "sizes must be identical");
     assert_eq!(entry_a.mode, entry_b.mode, "modes must be identical");
 
@@ -275,7 +307,10 @@ fn lock_is_deterministic() {
     let plain_a = format::read_entry(&vault_a, "det-password", "data.txt").unwrap();
     let plain_b = format::read_entry(&vault_b, "det-password", "data.txt").unwrap();
     assert_eq!(plain_a, plain_b, "decrypted content must be identical");
-    assert_eq!(plain_a, content, "decrypted content must match original plaintext");
+    assert_eq!(
+        plain_a, content,
+        "decrypted content must match original plaintext"
+    );
 }
 
 // ── test 8: verify reports ok on intact vault ─────────────────────────────────

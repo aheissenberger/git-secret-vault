@@ -27,7 +27,7 @@ pub struct InitArgs {
     pub require_keyring: bool,
 }
 
-pub fn run(args: &InitArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &InitArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = std::path::Path::new(&args.vault);
     let index_path = std::path::Path::new(&args.index);
 
@@ -49,6 +49,7 @@ pub fn run(args: &InitArgs, quiet: bool) -> Result<()> {
     } else {
         crypto::prompt_new_password()?
     };
+    crypto::validate_password_strength(&password)?;
 
     let vault_uuid = uuid::Uuid::new_v4().to_string();
     let manifest = Manifest::new(&vault_uuid);

@@ -31,7 +31,7 @@ struct EntryResult {
     status: &'static str,
 }
 
-pub fn run(args: &VerifyArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &VerifyArgs, quiet: bool, verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
 
     if !vault_path.exists() {
@@ -63,7 +63,11 @@ pub fn run(args: &VerifyArgs, quiet: bool) -> Result<()> {
         };
 
         if !quiet && !args.json {
-            println!("{}: {} [{}]", entry.path, status, entry.sha256);
+            if verbose {
+                println!("{}: {} [sha256:{}]", entry.path, status, entry.sha256);
+            } else {
+                println!("{}: {} [{}]", entry.path, status, entry.sha256);
+            }
         }
 
         results.push(EntryResult {
@@ -110,11 +114,7 @@ mod tests {
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 
-    fn make_vault(
-        dir: &Path,
-        password: &str,
-        entries: &[(&str, &[u8])],
-    ) -> std::path::PathBuf {
+    fn make_vault(dir: &Path, password: &str, entries: &[(&str, &[u8])]) -> std::path::PathBuf {
         let vault_path = dir.join("vault.zip");
         let mut manifest = Manifest::new("uuid");
         let mut updates = BTreeMap::new();
@@ -135,7 +135,11 @@ mod tests {
     #[test]
     fn verify_ok_when_all_entries_match() {
         let dir = tempdir().unwrap();
-        let vault_path = make_vault(dir.path(), "pw", &[("a.env", b"hello"), ("b.env", b"world")]);
+        let vault_path = make_vault(
+            dir.path(),
+            "pw",
+            &[("a.env", b"hello"), ("b.env", b"world")],
+        );
 
         let (manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
         let mut any_failed = false;

@@ -60,7 +60,7 @@ pub enum PolicyAction {
     },
 }
 
-pub fn run(args: &PolicyArgs, _quiet: bool) -> Result<()> {
+pub fn run(args: &PolicyArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     match &args.action {
         PolicyAction::Show { json } => {
             let policy = PasswordPolicy::load()?;
@@ -77,9 +77,7 @@ pub fn run(args: &PolicyArgs, _quiet: bool) -> Result<()> {
         }
         PolicyAction::Set { min_length } => {
             if *min_length < 8 {
-                return Err(VaultError::Other(
-                    "minimum length must be >= 8".to_owned(),
-                ));
+                return Err(VaultError::Other("minimum length must be >= 8".to_owned()));
             }
             let mut policy = PasswordPolicy::load()?;
             policy.password_min_length = *min_length;
@@ -128,7 +126,7 @@ mod tests {
         let args = PolicyArgs {
             action: PolicyAction::Set { min_length: 6 },
         };
-        let result = run(&args, false);
+        let result = run(&args, false, false);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains(">="));

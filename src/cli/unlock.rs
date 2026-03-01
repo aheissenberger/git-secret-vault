@@ -49,7 +49,7 @@ pub struct UnlockArgs {
     pub require_keyring: bool,
 }
 
-pub fn run(args: &UnlockArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &UnlockArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
 
     if !vault_path.exists() {
@@ -163,11 +163,19 @@ fn restore_permissions(dest: &Path, mode: Option<u32>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vault::{format, manifest::{Manifest, ManifestEntry}};
+    use crate::vault::{
+        format,
+        manifest::{Manifest, ManifestEntry},
+    };
     use std::collections::BTreeMap;
     use tempfile::tempdir;
 
-    fn seed_vault(dir: &std::path::Path, password: &str, name: &str, content: &[u8]) -> std::path::PathBuf {
+    fn seed_vault(
+        dir: &std::path::Path,
+        password: &str,
+        name: &str,
+        content: &[u8],
+    ) -> std::path::PathBuf {
         let vault_path = dir.join("vault.zip");
         let mut manifest = Manifest::new("uuid");
         manifest.upsert(ManifestEntry {

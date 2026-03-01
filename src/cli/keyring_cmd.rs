@@ -176,7 +176,10 @@ fn cmd_list() -> Result<()> {
         println!("No vaults registered.");
         return Ok(());
     }
-    println!("{:<38} {:<30} {:<26} Credential Status", "UUID", "Vault Path", "Saved At");
+    println!(
+        "{:<38} {:<30} {:<26} Credential Status",
+        "UUID", "Vault Path", "Saved At"
+    );
     println!("{}", "-".repeat(100));
     for entry in &entries {
         let status = match keyring_entry(&entry.uuid)?.get_password() {
@@ -208,7 +211,7 @@ fn cmd_purge() -> Result<()> {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-pub fn run(args: &KeyringArgs, _quiet: bool) -> Result<()> {
+pub fn run(args: &KeyringArgs, _quiet: bool, _verbose: bool) -> Result<()> {
     match &args.action {
         KeyringAction::Save {
             vault,

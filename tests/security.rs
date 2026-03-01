@@ -8,7 +8,6 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use git_secret_vault::crypto;
-use keyring;
 use git_secret_vault::error::VaultError;
 use git_secret_vault::fs::safe_join;
 use git_secret_vault::vault::format::{self, read_entry, rewrite_vault, sha256_hex};
@@ -110,7 +109,10 @@ fn lock_regular_file_round_trip_succeeds() {
 #[test]
 fn password_too_short_is_rejected() {
     let result = crypto::validate_password_strength("short");
-    assert!(result.is_err(), "passwords shorter than 8 chars must be rejected");
+    assert!(
+        result.is_err(),
+        "passwords shorter than 8 chars must be rejected"
+    );
 }
 
 #[test]
@@ -153,7 +155,11 @@ fn outer_index_contains_no_filenames() {
 #[test]
 fn unlock_keep_both_writes_vault_copy() {
     let dir = tempdir().unwrap();
-    let vault_path = seed_vault(dir.path(), "pw12345678", &[("secret.env", b"vault-content")]);
+    let vault_path = seed_vault(
+        dir.path(),
+        "pw12345678",
+        &[("secret.env", b"vault-content")],
+    );
 
     // Simulate a conflicting local file.
     let local = dir.path().join("secret.env");
@@ -256,5 +262,9 @@ fn keyring_entry_new_does_not_panic() {
     // keyring daemon.  We only assert that Entry::new succeeds (Ok), not that
     // get_password works in this environment.
     let result = keyring::Entry::new("git-secret-vault", "test-uuid-determinism");
-    assert!(result.is_ok(), "keyring::Entry::new must succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "keyring::Entry::new must succeed: {:?}",
+        result.err()
+    );
 }

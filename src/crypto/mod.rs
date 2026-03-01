@@ -79,7 +79,6 @@ pub fn get_password_no_prompt(from_stdin: bool) -> Result<Zeroizing<String>> {
 ///
 /// Call this after obtaining a password for *write* operations (lock/init).
 /// Do NOT call it for unlock/verify (read) operations.
-#[allow(dead_code)]
 pub fn validate_password_strength(password: &str) -> Result<()> {
     if password.len() < 8 {
         return Err(VaultError::Other(
@@ -87,7 +86,12 @@ pub fn validate_password_strength(password: &str) -> Result<()> {
         ));
     }
     const WEAK_PASSWORDS: &[&str] = &[
-        "password", "12345678", "secret123", "qwerty123", "letmein1", "abc12345",
+        "password",
+        "12345678",
+        "secret123",
+        "qwerty123",
+        "letmein1",
+        "abc12345",
     ];
     if WEAK_PASSWORDS.contains(&password.to_lowercase().as_str()) {
         return Err(VaultError::Other(
@@ -158,10 +162,20 @@ mod tests {
 
     #[test]
     fn validate_password_strength_rejects_weak_passwords() {
-        for weak in &["password", "12345678", "secret123", "qwerty123", "letmein1", "abc12345"] {
+        for weak in &[
+            "password",
+            "12345678",
+            "secret123",
+            "qwerty123",
+            "letmein1",
+            "abc12345",
+        ] {
             let err = validate_password_strength(weak).unwrap_err();
             let msg = err.to_string();
-            assert!(msg.contains("too common"), "expected 'too common' for {weak}: {msg}");
+            assert!(
+                msg.contains("too common"),
+                "expected 'too common' for {weak}: {msg}"
+            );
         }
     }
 
@@ -188,7 +202,10 @@ mod tests {
         // SAFETY: serialized by ENV_MUTEX
         unsafe { std::env::remove_var("VAULT_PASSWORD") };
         let result = get_password_no_prompt(false);
-        assert!(result.is_err(), "expected Err when no non-interactive source");
+        assert!(
+            result.is_err(),
+            "expected Err when no non-interactive source"
+        );
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("no non-interactive password source"),

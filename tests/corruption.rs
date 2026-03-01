@@ -209,7 +209,11 @@ fn lock_check_stale_file_returns_error() {
     // Simulate drift: read the manifest and check whether the hash matches
     // modified content (as the lock --check code does).
     let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let stored_entry = manifest.entries.iter().find(|e| e.path == entry_name).unwrap();
+    let stored_entry = manifest
+        .entries
+        .iter()
+        .find(|e| e.path == entry_name)
+        .unwrap();
 
     let modified_data = b"SECRET=tampered";
     let current_hash = sha256_hex(modified_data);
@@ -232,7 +236,11 @@ fn verify_clean_vault_passes() {
     create_vault_with_entry(&vault, entry_name, data);
 
     let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let entry = manifest.entries.iter().find(|e| e.path == entry_name).unwrap();
+    let entry = manifest
+        .entries
+        .iter()
+        .find(|e| e.path == entry_name)
+        .unwrap();
 
     // Read back the entry and verify its hash.
     let actual_data = read_entry(&vault, PASSWORD, entry_name).unwrap();
@@ -259,8 +267,7 @@ fn verify_detects_hash_mismatch() {
         path: entry_name.to_owned(),
         size: data.len() as u64,
         mtime: String::new(),
-        sha256: "0000000000000000000000000000000000000000000000000000000000000000"
-            .to_owned(),
+        sha256: "0000000000000000000000000000000000000000000000000000000000000000".to_owned(),
         mode: None,
     });
     let mut updates = BTreeMap::new();
@@ -269,7 +276,11 @@ fn verify_detects_hash_mismatch() {
 
     // Now simulate verify: read manifest and compare hashes.
     let (manifest, _) = read_manifest(&vault, PASSWORD).unwrap();
-    let entry = manifest.entries.iter().find(|e| e.path == entry_name).unwrap();
+    let entry = manifest
+        .entries
+        .iter()
+        .find(|e| e.path == entry_name)
+        .unwrap();
     let actual_data = read_entry(&vault, PASSWORD, entry_name).unwrap();
     let actual_hash = sha256_hex(&actual_data);
 

@@ -30,7 +30,7 @@ struct Check {
     hint: Option<String>,
 }
 
-pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &DoctorArgs, quiet: bool, verbose: bool) -> Result<()> {
     let vault_path = Path::new(&args.vault);
     let index_path = Path::new(&args.index);
 
@@ -118,7 +118,30 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         hint: if unzip_available {
             None
         } else {
-            Some("Install `unzip` (e.g. `apt-get install unzip` or `brew install unzip`).".to_owned())
+            Some(
+                "Install `unzip` (e.g. `apt-get install unzip` or `brew install unzip`)."
+                    .to_owned(),
+            )
+        },
+    });
+
+    // 6. System keyring accessible?
+    let keyring_ok = keyring::Entry::new("git-secret-vault", "doctor-probe")
+        .map(|_| true)
+        .unwrap_or(false);
+    checks.push(Check {
+        name: "keyring_available",
+        ok: keyring_ok,
+        description: "System keyring is accessible".to_owned(),
+        hint: if keyring_ok {
+            None
+        } else {
+            Some(
+                "Install or configure a keyring backend \
+                 (e.g. gnome-keyring, kwallet on Linux, macOS Keychain, or Windows Credential Manager). \
+                 Run `git-secret-vault keyring save` after fixing."
+                    .to_owned(),
+            )
         },
     });
 
@@ -145,7 +168,11 @@ pub fn run(args: &DoctorArgs, quiet: bool) -> Result<()> {
         for check in &checks {
             if check.ok {
                 if !quiet {
-                    println!("  [OK]   {}", check.description);
+                    if verbose {
+                        println!("  [OK]   {} ({})", check.description, check.name);
+                    } else {
+                        println!("  [OK]   {}", check.description);
+                    }
                 }
             } else if !quiet {
                 if let Some(hint) = &check.hint {

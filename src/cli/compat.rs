@@ -69,7 +69,7 @@ fn run_self_test() -> Result<bool> {
     Ok(read_back == content)
 }
 
-pub fn run(args: &CompatArgs, quiet: bool) -> Result<()> {
+pub fn run(args: &CompatArgs, quiet: bool, _verbose: bool) -> Result<()> {
     let unzip = unzip_available();
 
     let self_test_result = if args.self_test {
@@ -96,10 +96,7 @@ pub fn run(args: &CompatArgs, quiet: bool) -> Result<()> {
         for tool in COMPATIBLE_TOOLS {
             println!("  - {tool}");
         }
-        println!(
-            "unzip on PATH: {}",
-            if unzip { "yes" } else { "not found" }
-        );
+        println!("unzip on PATH: {}", if unzip { "yes" } else { "not found" });
         if args.self_test {
             println!("Self-test: {self_test_result}");
         }
@@ -135,10 +132,13 @@ mod tests {
         });
         assert_eq!(out["profile"], PROFILE);
         assert!(out["tools"].is_array());
-        assert_eq!(out["tools"].as_array().unwrap().len(), COMPATIBLE_TOOLS.len());
+        assert_eq!(
+            out["tools"].as_array().unwrap().len(),
+            COMPATIBLE_TOOLS.len()
+        );
         assert_eq!(out["self_test"], "skipped");
         // run without panicking
-        run(&args, false).unwrap();
+        run(&args, false, false).unwrap();
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod tests {
             self_test: true,
             json: false,
         };
-        run(&args, true).expect("self-test should pass");
+        run(&args, true, false).expect("self-test should pass");
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod tests {
             self_test: true,
             json: true,
         };
-        run(&args, false).expect("self-test should pass");
+        run(&args, false, false).expect("self-test should pass");
     }
 
     #[test]
