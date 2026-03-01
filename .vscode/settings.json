@@ -1,0 +1,4 @@
+{
+  "git.detectWorktrees": true,
+  "git.detectWorktreesLimit": 100
+}

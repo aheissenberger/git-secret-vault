@@ -11,6 +11,7 @@
     }
   },
   "postCreateCommand": "rustup update stable && rustup default stable && rustup component add rustfmt clippy",
+  "postStartCommand": "sudo install -d -m 2775 -o vscode -g vscode /workspaces/git-secret-vault.worktrees",
   "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/copilot-cli:1": {
