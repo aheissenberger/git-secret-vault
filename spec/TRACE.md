@@ -46,7 +46,7 @@
 | NFR-001 | src/vault/format.rs, src/vault/manifest.rs | cargo test (determinism test) |  | Deterministic update policy — **Done** |
 | NFR-002 | src/vault/format.rs, src/vault/manifest.rs | Per-entry IVs are random (crypto-safe); manifest ordering is deterministic via BTreeMap |  | Determinism without crypto weakening — **Done** |
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
-| NFR-004 |  |  |  | Shell completion UX |
+| NFR-004 | src/cli/completions.rs |  |  | Shell completion UX — **Done** |
 | NFR-005 |  |  |  | Editor/pager UX integration |
 | NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts |
 | NFR-007 |  |  |  | SBOM release artifact |
