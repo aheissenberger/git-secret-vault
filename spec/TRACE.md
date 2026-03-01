@@ -33,13 +33,13 @@
 | FR-028 | src/cli/harden.rs | cargo test (80 unit tests pass) |  | Update .gitignore with sensitive patterns; install pre-commit hook; --dry-run — **Done** |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 | src/crypto/mod.rs (validate_password_strength) |  |  | Password policy minimums |
-| SEC-003 |  |  |  | Password policy controls |
+| SEC-003 | src/cli/policy.rs |  |  | Password policy controls |
 | SEC-004 | src/crypto/mod.rs (get_password env-var branch) |  |  | Env password leakage warning |
 | SEC-005 | src/crypto/mod.rs |  |  | Memory hygiene best-effort — **Done** |
 | SEC-006 | src/fs/mod.rs | cargo test (safe_join tests) |  | Path traversal prevention — **Done** |
 | SEC-007 | src/cli/unlock.rs, src/vault/format.rs |  |  | Symlink default deny — **Done** |
 | SEC-008 |  |  |  | Post-lock plaintext removal |
-| SEC-009 |  |  |  | Shred warning semantics |
+| SEC-009 | src/cli/lock.rs |  |  | Shred warning semantics |
 | SEC-010 | src/cli/status.rs, src/cli/lock.rs, src/cli/unlock.rs |  |  | Secret output redaction — **Done** |
 | SEC-011 | src/crypto/mod.rs |  |  | Password output redaction — **Done** |
 | SEC-012 | src/cli/mod.rs |  |  | Logging verbosity controls — **Done** |

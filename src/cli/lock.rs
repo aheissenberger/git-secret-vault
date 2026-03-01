@@ -31,6 +31,10 @@ pub struct LockArgs {
     /// Delete plaintext files after successful encryption
     #[arg(long)]
     pub remove: bool,
+
+    /// Delete plaintext after lock using best-effort secure erase (overwrite before delete). NOT guaranteed on SSDs or copy-on-write filesystems.
+    #[arg(long)]
+    pub shred: bool,
 }
 
 pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
@@ -135,6 +139,27 @@ pub fn run(args: &LockArgs, quiet: bool) -> Result<()> {
         }
     }
 
+    if args.shred {
+        eprintln!("warning: --shred performs best-effort overwrite before deletion.");
+        eprintln!("warning: Secure deletion is NOT guaranteed on SSDs, copy-on-write");
+        eprintln!("warning: filesystems (btrfs, APFS, ZFS), or network-mounted volumes.");
+        for path_str in &locked_paths {
+            let local = Path::new(path_str);
+            if local.exists() {
+                // Best-effort: overwrite with zeros before deletion
+                if let Ok(metadata) = std::fs::metadata(local) {
+                    let len = metadata.len() as usize;
+                    let zeros = vec![0u8; len];
+                    let _ = std::fs::write(local, &zeros);
+                }
+                std::fs::remove_file(local).map_err(VaultError::Io)?;
+                if !quiet {
+                    println!("shredded: {path_str}");
+                }
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -169,6 +194,7 @@ mod tests {
             password_stdin: false,
             check: false,
             remove: false,
+            shred: false,
         };
 
         // Change to dir so relative path works.
@@ -211,6 +237,7 @@ mod tests {
             password_stdin: false,
             check: false,
             remove: false,
+            shred: false,
         };
         // Cannot call run() without password prompt, test internal logic:
         // Empty manifest + empty paths = error.
@@ -257,6 +284,7 @@ mod tests {
             password_stdin: false,
             check: false,
             remove: false,
+            shred: false,
         };
         let (loaded_manifest, _) = format::read_manifest(&vault_path, "pw").unwrap();
         let path_strings: Vec<String> = if args.paths.is_empty() {
@@ -265,5 +293,27 @@ mod tests {
             args.paths.clone()
         };
         assert_eq!(path_strings, vec!["tracked.env"]);
+    }
+
+    #[test]
+    fn shred_deletes_file_after_overwrite() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("secret.txt");
+        std::fs::write(&file, b"sensitive data").unwrap();
+        assert!(file.exists());
+
+        // Simulate the shred block logic directly.
+        let path_str = file.to_str().unwrap();
+        let local = std::path::Path::new(path_str);
+        if local.exists() {
+            if let Ok(metadata) = std::fs::metadata(local) {
+                let len = metadata.len() as usize;
+                let zeros = vec![0u8; len];
+                let _ = std::fs::write(local, &zeros);
+            }
+            std::fs::remove_file(local).unwrap();
+        }
+
+        assert!(!file.exists());
     }
 }

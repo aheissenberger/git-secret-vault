@@ -6,6 +6,7 @@ pub mod harden;
 pub mod init;
 pub mod lock;
 pub mod passwd;
+pub mod policy;
 pub mod rm;
 pub mod status;
 pub mod unlock;
@@ -58,4 +59,6 @@ pub enum Commands {
     Diff(diff::DiffArgs),
     /// Re-encrypt vault with a new password
     Passwd(passwd::PasswdArgs),
+    /// Manage password policy settings
+    Policy(policy::PolicyArgs),
 }
