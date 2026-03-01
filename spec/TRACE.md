@@ -29,7 +29,7 @@
 | FR-024 | src/cli/verify.rs | cargo test (80 unit tests pass) |  | Validate vault integrity per-entry with hash verification and --json output — **Done** |
 | FR-025 | src/cli/clean.rs | cargo test (80 unit tests pass) |  | Remove tracked plaintext files safely with per-file prompt and --force flag — **Done** |
 | FR-026 | src/cli/doctor.rs | cargo test (80 unit tests pass) |  | Diagnose environment: vault/index existence, JSON validity, write access, unzip on PATH — **Done** |
-| FR-027 |  |  |  | Compatibility-check behavior (split) |
+| FR-027 | src/cli/compat.rs |  |  | Compatibility-check behavior (split) |
 | FR-028 | src/cli/harden.rs | cargo test (80 unit tests pass) |  | Update .gitignore with sensitive patterns; install pre-commit hook; --dry-run — **Done** |
 | SEC-001 | src/vault/index.rs | cargo test (index no-filename assertion) |  | Metadata exposure default safety — **Done** |
 | SEC-002 | src/crypto/mod.rs (validate_password_strength) |  |  | Password policy minimums |

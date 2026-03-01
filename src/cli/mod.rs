@@ -1,4 +1,5 @@
 pub mod clean;
+pub mod compat;
 pub mod doctor;
 pub mod harden;
 pub mod init;
@@ -37,7 +38,8 @@ pub enum Commands {
     Lock(lock::LockArgs),
     /// Decrypt files from the vault
     Unlock(unlock::UnlockArgs),
-    /// Show vault status without requiring password
+    /// Show vault status without requiring password (alias: ls)
+    #[command(alias = "ls")]
     Status(status::StatusArgs),
     /// Remove entries from the vault
     Rm(rm::RmArgs),
@@ -45,6 +47,8 @@ pub enum Commands {
     Verify(verify::VerifyArgs),
     /// Remove unlocked tracked plaintext files safely
     Clean(clean::CleanArgs),
+    /// Check encryption profile and tool compatibility
+    Compat(compat::CompatArgs),
     /// Diagnose environment readiness
     Doctor(doctor::DoctorArgs),
     /// Update .gitignore and optionally install git hooks
