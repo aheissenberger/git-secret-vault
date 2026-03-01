@@ -52,6 +52,29 @@ pub fn get_password(from_stdin: bool, prompt: &str) -> Result<Zeroizing<String>>
     }
 }
 
+/// Like `get_password` but returns `Err` instead of prompting interactively.
+///
+/// Used for CI/automation flows (FR-005) where no TTY is available.
+/// Checks `VAULT_PASSWORD` env var first (with warning), then reads from stdin
+/// when `from_stdin` is `true`, otherwise fails fast.
+pub fn get_password_no_prompt(from_stdin: bool) -> Result<Zeroizing<String>> {
+    if let Ok(val) = std::env::var("VAULT_PASSWORD") {
+        eprintln!(
+            "warning: Using VAULT_PASSWORD environment variable exposes password via \
+             process environment and system logs. Consider using --password-stdin instead."
+        );
+        return Ok(Zeroizing::new(val));
+    }
+    if from_stdin {
+        return read_password_stdin();
+    }
+    Err(crate::error::VaultError::Other(
+        "--no-prompt: no non-interactive password source available \
+         (use --password-stdin or VAULT_PASSWORD)"
+            .to_owned(),
+    ))
+}
+
 /// Validate that a password meets the minimum strength requirements (SEC-002).
 ///
 /// Call this after obtaining a password for *write* operations (lock/init).
@@ -91,5 +114,28 @@ mod tests {
     #[test]
     fn validate_password_strength_rejects_exactly_seven() {
         assert!(validate_password_strength("1234567").is_err());
+    }
+
+    #[test]
+    fn get_password_no_prompt_fails_without_source() {
+        // SAFETY: single-threaded test context
+        unsafe { std::env::remove_var("VAULT_PASSWORD") };
+        let result = get_password_no_prompt(false);
+        assert!(result.is_err(), "expected Err when no non-interactive source");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("no non-interactive password source"),
+            "unexpected message: {msg}"
+        );
+    }
+
+    #[test]
+    fn get_password_no_prompt_uses_env_var() {
+        // SAFETY: single-threaded test context
+        unsafe { std::env::set_var("VAULT_PASSWORD", "env-secret") };
+        let result = get_password_no_prompt(false);
+        unsafe { std::env::remove_var("VAULT_PASSWORD") };
+        assert!(result.is_ok(), "expected Ok when VAULT_PASSWORD is set");
+        assert_eq!(result.unwrap().as_str(), "env-secret");
     }
 }

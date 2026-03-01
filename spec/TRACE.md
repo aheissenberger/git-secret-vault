@@ -14,7 +14,7 @@
 | FR-009 | src/cli/init.rs | scripts/manual-test-sandbox.sh |  | Init workflow behavior (`git-secret-vault.zip` + `.git-secret-vault.index.json`) — In Progress |
 | FR-010 | src/cli/lock.rs, src/vault/format.rs | cargo test (47 tests pass) |  | Lock workflow: no-arg lock of all tracked entries, `--remove` plaintext cleanup, `--check` drift — **Done** |
 | FR-011 | src/cli/unlock.rs, src/fs/mod.rs | cargo test (47 tests pass) |  | Unlock conflict policies: `--force`, `--keep-local`, `--keep-both`, `--no-prompt`, atomic writes — **Done** |
-| FR-012 | src/cli/status.rs |  |  | Status and diff behavior — In Progress |
+| FR-012 | src/cli/status.rs, src/cli/diff.rs | cargo test (--fail-if-dirty, pager, no-prompt tests pass) |  | Status --fail-if-dirty CI drift gating, $PAGER support — **Done** |
 | FR-013 |  |  |  | Remove, password rotation, keyring |
 | FR-014 | src/cli/verify.rs, src/cli/clean.rs, src/cli/doctor.rs, src/cli/compat.rs, src/cli/harden.rs | cargo test |  | Verify, clean, doctor, compat, harden — **Done** |
 | FR-015 | src/config.rs, src/cli/config_cmd.rs |  |  | Config and local state model |
@@ -47,7 +47,7 @@
 | NFR-002 | src/vault/format.rs, src/vault/manifest.rs | Per-entry IVs are random (crypto-safe); manifest ordering is deterministic via BTreeMap |  | Determinism without crypto weakening — **Done** |
 | NFR-003 | src/fs/mod.rs | cargo test (atomic_write test) |  | Atomic write IO policy — **Done** |
 | NFR-004 | src/cli/completions.rs |  |  | Shell completion UX — **Done** |
-| NFR-005 |  |  |  | Editor/pager UX integration |
+| NFR-005 | src/cli/status.rs, src/cli/diff.rs | cargo test (pager tests pass) |  | $PAGER respected in status and diff human-readable output — **Done** |
 | NFR-006 | .github/workflows/release.yml |  |  | Signed release artifacts |
 | NFR-007 | .github/workflows/release.yml |  |  | SBOM release artifact — **Done** |
 | NFR-008 | docs/reproducible-build.md |  |  | Reproducible build documentation |

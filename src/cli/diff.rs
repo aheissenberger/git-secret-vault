@@ -155,18 +155,23 @@ pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
         let out = json!({ "entries": entries, "has_changes": has_changes });
         println!("{}", serde_json::to_string_pretty(&out).unwrap());
     } else {
+        let mut output = String::new();
         for r in &results {
             match r.status {
                 "identical" => {}
-                "vault-only" => println!("vault-only: {}", r.path),
-                "local-only" => println!("local-only: {}", r.path),
+                "vault-only" => output.push_str(&format!("vault-only: {}\n", r.path)),
+                "local-only" => output.push_str(&format!("local-only: {}\n", r.path)),
                 "modified" => {
                     if let Some(ref d) = r.diff {
-                        println!("{d}");
+                        output.push_str(d);
+                        output.push('\n');
                     }
                 }
                 _ => {}
             }
+        }
+        if !output.is_empty() {
+            print_with_pager(&output);
         }
     }
 
@@ -177,6 +182,23 @@ pub fn run(args: &DiffArgs, _quiet: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Pipe `output` through `$PAGER` when set, otherwise print directly.
+fn print_with_pager(output: &str) {
+    if let Ok(pager) = std::env::var("PAGER")
+        && let Ok(mut child) = std::process::Command::new(&pager)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+    {
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            let _ = stdin.write_all(output.as_bytes());
+        }
+        let _ = child.wait();
+        return;
+    }
+    print!("{output}");
 }
 
 /// Produce a unified diff of two text strings.
