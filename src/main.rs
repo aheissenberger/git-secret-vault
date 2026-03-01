@@ -27,6 +27,7 @@ fn main() -> Result<()> {
         Commands::Diff(args) => cli::diff::run(args, cli.quiet),
         Commands::Completions(args) => cli::completions::run(args),
         Commands::Config(args) => cli::config_cmd::run(args, cli.quiet),
+        Commands::Keyring(args) => cli::keyring_cmd::run(args, cli.quiet),
     };
     if let Err(e) = result {
         eprintln!("error: {e}");
